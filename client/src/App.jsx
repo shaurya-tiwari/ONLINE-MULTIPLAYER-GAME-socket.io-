@@ -5,9 +5,8 @@ import LobbyScreen from './screens/LobbyScreen';
 import GameScreen from './screens/GameScreen';
 
 const socket = io(
-    window.location.hostname === "localhost"
-        ? "http://localhost:3000"
-        : undefined,
+    import.meta.env.VITE_SERVER_URL ||
+    (window.location.hostname === "localhost" ? "http://localhost:3000" : undefined),
     {
         transports: ["websocket"],
         reconnectionAttempts: 5
@@ -86,10 +85,8 @@ function App() {
             {screen === 'home' && (
                 <HomeScreen
                     onHost={handleStartHost}
-                    onJoin={() => {
-                        const code = prompt("Enter Room Code:");
-                        const name = prompt("Enter Your Name:");
-                        if (code && name) handleJoinGame(name, code.toUpperCase());
+                    onJoin={(name, code) => {
+                        handleJoinGame(name, code);
                     }}
                 />
             )}
