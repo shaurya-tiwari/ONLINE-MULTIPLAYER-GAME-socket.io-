@@ -4,7 +4,7 @@ import HomeScreen from './screens/HomeScreen';
 import LobbyScreen from './screens/LobbyScreen';
 import GameScreen from './screens/GameScreen';
 
-const socket = io('http://localhost:3000');
+const socket = io();
 
 function App() {
     const [screen, setScreen] = useState('home'); // home, lobby, game
