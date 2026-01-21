@@ -18,28 +18,47 @@ const GameScreen = ({ socket, roomCode, playerId, players, gameMap }) => {
         // Reset overlay when map changes (restart)
         setShowGameOver(false);
 
-        // Set canvas dimensions
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-
         // Callback when local player finishes
         const onGameOver = () => {
             setShowGameOver(true);
         };
 
-        // Initialize Game Loop with Map
-        startGameLoop(canvas, socket, playerId, players, gameMap, roomCode, onGameOver);
-
-        // Handle resizing
-        const handleResize = () => {
+        // Set initial canvas dimensions based on parent
+        const parent = canvas.parentElement;
+        if (parent) {
+            canvas.width = parent.clientWidth || window.innerWidth;
+            canvas.height = parent.clientHeight || window.innerHeight;
+        } else {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
-        };
-        window.addEventListener('resize', handleResize);
+        }
+
+        // Initialize Game Loop with Map
+        try {
+            startGameLoop(canvas, socket, playerId, players, gameMap, roomCode, onGameOver);
+        } catch (err) {
+            console.error("Failed to start game loop:", err);
+        }
+
+        // Handle resizing
+        const resizeObserver = new ResizeObserver(entries => {
+            const entry = entries[0];
+            if (entry) {
+                // Check for valid dimensions to prevent 0x0 canvas
+                if (entry.contentRect.width > 0 && entry.contentRect.height > 0) {
+                    canvas.width = entry.contentRect.width;
+                    canvas.height = entry.contentRect.height;
+                }
+            }
+        });
+
+        if (parent) {
+            resizeObserver.observe(parent);
+        }
 
         return () => {
             stopGameLoop();
-            window.removeEventListener('resize', handleResize);
+            resizeObserver.disconnect();
         };
     }, [socket, playerId, players, gameMap, roomCode]);
 
@@ -48,24 +67,30 @@ const GameScreen = ({ socket, roomCode, playerId, players, gameMap }) => {
     };
 
     return (
-        <div className="w-full h-full bg-black overflow-hidden relative">
-            <canvas ref={canvasRef} className="block" />
+        <div className="w-full h-full flex flex-col items-center justify-start bg-gray-900 overflow-hidden relative pt-12 md:justify-center md:pt-0">
+            {/* Main Game Container */}
+            <div className="relative w-full max-w-6xl aspect-video bg-black shadow-2xl overflow-hidden shrink-0">
+                <canvas ref={canvasRef} className="block w-full h-full object-contain" />
 
-            {/* HUD Layer */}
-            <div className="absolute top-4 left-4 text-white text-xl font-bold font-mono pointer-events-none">
-                ROOM: {roomCode}
+                {/* HUD Layer */}
+                <div className="absolute top-4 left-4 pointer-events-none z-10">
+                    <span className="text-white/50 text-xs font-bold font-mono px-2 py-1 bg-black/50 rounded">ROOM: {roomCode}</span>
+                </div>
+
+                {/* Game Over Overlay */}
+                {showGameOver && (
+                    <GameOverOverlay
+                        isHost={isHost}
+                        onRestart={handleRestart}
+                    />
+                )}
             </div>
 
-            {/* Game Over Overlay */}
-            {showGameOver && (
-                <GameOverOverlay
-                    isHost={isHost}
-                    onRestart={handleRestart}
-                />
-            )}
-
-            {/* Mobile Controls Overlay */}
-            <MobileControls />
+            {/* Controls Area - Mobile Only, positioned for comfort */}
+            {/* Hidden on md (768px+), visible on smaller screens */}
+            <div className="w-full h-auto mt-6 px-4 pb-8 md:hidden shrink-0 z-20 pointer-events-auto flex justify-center">
+                <MobileControls />
+            </div>
         </div>
     );
 };

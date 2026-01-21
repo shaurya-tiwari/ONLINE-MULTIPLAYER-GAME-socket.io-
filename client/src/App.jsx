@@ -21,50 +21,63 @@ function App() {
     const [isHost, setIsHost] = useState(false);
     const [gameMap, setGameMap] = useState(null); // [NEW] Map state
 
-    useEffect(() => {
-        socket.on('connect', () => {
-            console.log("Connected to server:", socket.id);
-        });
+    // Use refs for stable access inside listeners
+    const playerNameRef = React.useRef(playerName);
+    useEffect(() => { playerNameRef.current = playerName; }, [playerName]);
 
-        socket.on('room_created', ({ code }) => {
+    useEffect(() => {
+        const onConnect = () => {
+            console.log("Connected to server:", socket.id);
+        };
+
+        const onRoomCreated = ({ code }) => {
+            console.log("Room Created:", code);
             setRoomCode(code);
             setScreen('lobby');
             setIsHost(true);
             setPlayers({
-                [socket.id]: { id: socket.id, name: playerName, isHost: true }
+                [socket.id]: { id: socket.id, name: playerNameRef.current, isHost: true }
             });
-        });
+        };
 
-        socket.on('update_room', ({ players, code }) => {
+        const onUpdateRoom = ({ players, code }) => {
+            console.log("Room Updated:", players);
             setPlayers(players);
             setRoomCode(code);
             setScreen('lobby');
-        });
+        };
 
-        // Modified to accept map data
-        socket.on('game_started', ({ gameMap }) => {
+        const onGameStarted = ({ gameMap }) => {
+            console.log("Game Started! Map received.");
             setGameMap(gameMap);
             setScreen('game');
-        });
+        };
 
-        socket.on('game_restarted', ({ gameMap }) => {
+        const onGameRestarted = ({ gameMap }) => {
+            console.log("Game Restarted!");
             setGameMap(gameMap);
-            // Screen is already 'game', but map update triggers re-render in GameScreen
-        });
+        };
 
-        socket.on('error', ({ message }) => {
+        const onError = ({ message }) => {
             alert(message);
-        });
+        };
+
+        socket.on('connect', onConnect);
+        socket.on('room_created', onRoomCreated);
+        socket.on('update_room', onUpdateRoom);
+        socket.on('game_started', onGameStarted);
+        socket.on('game_restarted', onGameRestarted);
+        socket.on('error', onError);
 
         return () => {
-            socket.off('connect');
-            socket.off('room_created');
-            socket.off('update_room');
-            socket.off('game_started');
-            socket.off('game_restarted');
-            socket.off('error');
+            socket.off('connect', onConnect);
+            socket.off('room_created', onRoomCreated);
+            socket.off('update_room', onUpdateRoom);
+            socket.off('game_started', onGameStarted);
+            socket.off('game_restarted', onGameRestarted);
+            socket.off('error', onError);
         };
-    }, [playerName]);
+    }, []); // Empty dependency array = stable listeners
 
     const handleStartHost = (name) => {
         setPlayerName(name);
@@ -81,7 +94,7 @@ function App() {
     };
 
     return (
-        <div className="w-screen h-screen flex justify-center items-center bg-gray-900">
+        <div className="min-h-screen w-full flex justify-center items-center bg-gray-900 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gray-800 via-gray-900 to-black text-white overflow-hidden selection:bg-blue-500/30">
             {screen === 'home' && (
                 <HomeScreen
                     onHost={handleStartHost}

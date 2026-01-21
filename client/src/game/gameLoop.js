@@ -213,126 +213,207 @@ const render = () => {
 
     updateParticles();
 
-    // 1. Sky & Background (Production Gradient)
-    const skyGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    // 1. Sky & Background
+    ctx.fillStyle = '#fdfbf7';
+    ctx.fillRect(0, 0, canvas.width, canvas.height); // Clear screen
 
-    skyGradient.addColorStop(0.5, '#ffffffff'); // Sunset red
-
-    ctx.fillStyle = skyGradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (canvas.width === 0 || canvas.height === 0) return;
 
     ctx.save();
+
+    // Scaling Logic
+    const BASE_HEIGHT = 600;
+    const scaleFactor = Math.max(0.1, canvas.height / BASE_HEIGHT);
+    ctx.scale(scaleFactor, scaleFactor);
     ctx.translate(-cameraX, 0);
 
-    // 2. Ground Polish
+    // 2. Ground
     const groundY = 500;
-    ctx.fillStyle = '#2a5301ff'; // Darker grass
-    ctx.fillRect(0, groundY, MAP_LENGTH + 2000, canvas.height - groundY);
+
+    // Draw Ground Line
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(0, groundY);
+    ctx.lineTo(MAP_LENGTH + 2000, groundY);
+    ctx.stroke();
+
+    // Scribble shading
+    ctx.strokeStyle = '#e0e0e0';
+    ctx.lineWidth = 1;
+
+    // Visible world X range calculation
+    const startX = Math.floor(cameraX / 20) * 20;
+    const endX = startX + (canvas.width / scaleFactor) + 100;
+
+    for (let x = startX; x < endX; x += 20) {
+        if (x > MAP_LENGTH + 2000) break;
+        ctx.beginPath();
+        ctx.moveTo(x, groundY);
+        ctx.lineTo(x - 20, 600); // Draw down to base height to cover view
+        ctx.stroke();
+    }
 
 
     // 2.5 Particles
     particles.forEach(p => {
-        ctx.fillStyle = `rgba(200, 200, 200, ${p.life})`;
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.stroke();
+        if (p.size > 3) {
+            ctx.fillStyle = '#000';
+            ctx.fill();
+        }
     });
 
     // Finish Line Banner
-    ctx.fillStyle = '#FFFFFF';
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
     for (let i = 0; i < 20; i++) {
-        if (i % 2 === 0) ctx.fillRect(MAP_LENGTH, groundY, 15, 15);
-        else ctx.fillRect(MAP_LENGTH + 15, groundY, 15, 15);
+        const x = MAP_LENGTH + (i * 15);
+        ctx.strokeRect(x, groundY, 15, 15);
+        if (i % 2 === 0) {
+            ctx.beginPath();
+            ctx.moveTo(x, groundY);
+            ctx.lineTo(x + 15, groundY + 15);
+            ctx.moveTo(x + 15, groundY);
+            ctx.lineTo(x, groundY + 15);
+            ctx.stroke();
+        }
     }
 
     // Visual Finish Post
-    ctx.fillStyle = '#444';
-    ctx.fillRect(MAP_LENGTH, groundY - 300, 10, 300);
-    ctx.fillStyle = '#ff0000';
-    ctx.fillRect(MAP_LENGTH - 100, groundY - 300, 100, 50);
-    ctx.fillStyle = 'white';
-    ctx.font = 'bold 20px Arial';
-    ctx.fillText("FINISH", MAP_LENGTH - 50, groundY - 265);
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(MAP_LENGTH, groundY - 300, 10, 300);
+
+    // Flag
+    ctx.beginPath();
+    ctx.moveTo(MAP_LENGTH - 100, groundY - 300);
+    ctx.lineTo(MAP_LENGTH, groundY - 300);
+    ctx.lineTo(MAP_LENGTH, groundY - 250);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(MAP_LENGTH - 90, groundY - 290);
+    ctx.lineTo(MAP_LENGTH - 10, groundY - 260);
+    ctx.stroke();
+
+    ctx.fillStyle = '#000';
+    ctx.font = 'bold 24px "Courier New", monospace';
+    ctx.fillText("FINISH", MAP_LENGTH - 50, groundY - 220);
 
     // 3. Map Objects
     if (mapData) {
+        // Optimize Loop: Only draw visible objects
+        // Simple culling can be done if objects are sorted, but for <100 objects generic loop is fine
+        // Just checking bounds helps a bit if map is huge
+
         mapData.trees.forEach((tree, index) => {
+            // Culling check
+            if (tree.x + tree.w < cameraX || tree.x > cameraX + (canvas.width / scaleFactor)) return;
+
             const img = getAsset('tree', index);
             if (img) {
-                // Ground Shadow
-                ctx.fillStyle = 'rgba(0,0,0,0.2)';
+                ctx.strokeStyle = '#aaa';
+                ctx.lineWidth = 2;
                 ctx.beginPath();
                 ctx.ellipse(tree.x + tree.w / 2, groundY, tree.w / 2, 10, 0, 0, Math.PI * 2);
-                ctx.fill();
+                ctx.stroke();
 
                 ctx.drawImage(img, tree.x, tree.y, tree.w, tree.h);
             } else {
-                ctx.fillStyle = '#5d4037'; // Trunk
-                ctx.fillRect(tree.x + tree.w / 2 - 10, tree.y + tree.h / 2, 20, tree.h / 2);
-                ctx.fillStyle = '#2e7d32'; // Leaves
+                const tx = tree.x;
+                const bottomY = groundY;
+                const tw = tree.w * 1.5;
+                const th = tree.h * 1.5;
+
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 3;
                 ctx.beginPath();
-                ctx.moveTo(tree.x, tree.y + tree.h / 2);
-                ctx.lineTo(tree.x + tree.w / 2, tree.y);
-                ctx.lineTo(tree.x + tree.w, tree.y + tree.h / 2);
-                ctx.fill();
+                ctx.moveTo(tx + tw / 2 - 10, bottomY);
+                ctx.lineTo(tx + tw / 2 - 10, bottomY - th / 2);
+                ctx.lineTo(tx + tw / 2 + 10, bottomY - th / 2);
+                ctx.lineTo(tx + tw / 2 + 10, bottomY);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.arc(tx + tw / 2, bottomY - th / 2 - 20, 40, 0, Math.PI * 2);
+                ctx.arc(tx + tw / 2 - 30, bottomY - th / 2 + 10, 30, 0, Math.PI * 2);
+                ctx.arc(tx + tw / 2 + 30, bottomY - th / 2 + 10, 30, 0, Math.PI * 2);
+                ctx.stroke();
+
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.arc(tx + tw / 2 - 10, bottomY - th / 2 - 10, 10, 0, Math.PI);
+                ctx.stroke();
             }
         });
 
         mapData.obstacles.forEach((obs, index) => {
-            const img = getAsset(obs.type, index);
+            if (obs.x + obs.w < cameraX || obs.x > cameraX + (canvas.width / scaleFactor)) return;
 
-            // Obstacle Shadow
-            ctx.fillStyle = 'rgba(0,0,0,0.2)';
-            ctx.beginPath();
-            ctx.ellipse(obs.x + obs.w / 2, groundY, obs.w / 2, 5, 0, 0, Math.PI * 2);
-            ctx.fill();
+            const img = getAsset(obs.type, index);
 
             if (img) {
                 ctx.drawImage(img, obs.x, obs.y, obs.w, obs.h);
             } else {
-                ctx.fillStyle = '#e53935';
-                ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
-                ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+                ctx.strokeStyle = '#000';
                 ctx.lineWidth = 4;
-                ctx.strokeRect(obs.x + 5, obs.y + 5, obs.w - 10, obs.h - 10);
+                ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
+
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                for (let i = 0; i < obs.w + obs.h; i += 10) {
+                    ctx.moveTo(obs.x + i, obs.y);
+                    ctx.lineTo(obs.x + i - 20, obs.y + obs.h);
+                }
+                ctx.save();
+                ctx.rect(obs.x, obs.y, obs.w, obs.h);
+                ctx.clip();
+                ctx.stroke();
+                ctx.restore();
             }
         });
     }
 
     // 4. Players
     Object.values(users).forEach(player => {
-        const color = player.id === myId ? '#3d5afe' : '#ff9100';
+        const color = '#000';
 
-        // Player Shadow
-        ctx.fillStyle = 'rgba(0,0,0,0.3)';
+        ctx.strokeStyle = '#aaa';
+        ctx.lineWidth = 1;
         ctx.beginPath();
-        const shadowScale = 1 - (groundY - (player.y + player.h)) / 200; // Shrink as jump
+        const shadowScale = 1 - (groundY - (player.y + player.h)) / 200;
         ctx.ellipse(player.x + player.w / 2, groundY, (player.w / 2) * shadowScale, 5 * shadowScale, 0, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Dust for running
-        if (player.state === 'run' && frameCount % 5 === 0) {
-            createDust(player.x, groundY);
-        }
+        ctx.stroke();
 
         drawStickman(ctx, player.x, player.y, player.state, frameCount, color);
 
-        // Name tag with glow
-        ctx.fillStyle = 'white';
-        ctx.font = 'bold 14px "Segoe UI", sans-serif';
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(player.x + player.w / 2 - 40, player.y - 35, 80, 20);
+
+        ctx.fillStyle = '#000';
+        ctx.font = '12px "Courier New", monospace';
         ctx.textAlign = 'center';
-        ctx.shadowColor = 'black';
-        ctx.shadowBlur = 4;
-        ctx.fillText(player.name, player.x + player.w / 2, player.y - 15);
-        ctx.shadowBlur = 0;
+        ctx.fillText(player.name, player.x + player.w / 2, player.y - 20);
     });
 
     ctx.restore();
 
-    // 5. HUD
+    // 5. HUD - drawn separate from game scale to keep text readable/fixed size if desired, 
+    // OR scaled if we want it to shrink.
+    // User asked to fix clutter, usually HUD should probably stay roughly same size relative to SCREEN or relative to Game?
+    // "production level" usually implies UI scales with screen, but readability is key.
+    // Let's keep existing HUD render separate (it draws on top of everything). 
+    // BUT we need to check renderHUD to see if it uses absolute pixels. 
+    // renderHUD uses (canvas.width - ...) so it adapts to width.
+    // We should probably NOT scale the HUD with the game world zoom, but let it adapt to canvas dimensions naturally.
     renderHUD();
 
-    // Finished Message Polish
     if (users[myId] && users[myId].finished) {
         renderGameOver();
     }
@@ -387,53 +468,52 @@ const renderGameOver = () => {
 };
 
 const renderHUD = () => {
-    const padding = 20;
-    const boardW = 220;
+    // Mini Leaderboard
+    const padding = 10;
+    const boardW = 150; // Smaller width
     const x = canvas.width - boardW - padding;
     const y = padding;
 
-    ctx.fillStyle = 'rgba(13, 17, 23, 0.8)'; // GitHub style dark
-    ctx.beginPath();
-    ctx.roundRect(x, y, boardW, 110, 12);
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-    ctx.stroke();
+    // Use a smaller height based on player count, max 80px
+    const boardH = Math.min(100, 30 + (Object.keys(users).length * 20));
 
-    ctx.fillStyle = '#58a6ff';
-    ctx.font = 'bold 15px sans-serif';
+    ctx.save();
+    // Do not scale HUD with game world, keep it screen-space but small
+
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.beginPath();
+    ctx.roundRect(x, y, boardW, boardH, 8);
+    ctx.fill();
+
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 10px sans-serif'; // Tiny font
     ctx.textAlign = 'left';
-    ctx.fillText("LEADERBOARD", x + 15, y + 28);
+    ctx.fillText("LEADERBOARD", x + 10, y + 15);
 
     const sortedPlayers = Object.values(users).sort((a, b) => b.x - a.x);
 
     sortedPlayers.forEach((p, index) => {
-        const barY = y + 45 + (index * 28);
+        const barY = y + 25 + (index * 15);
+        if (barY > y + boardH - 10) return; // Clip
+
         const progress = Math.min(p.x / MAP_LENGTH, 1);
 
-        ctx.fillStyle = '#c9d1d9';
-        ctx.font = '12px sans-serif';
-        ctx.fillText(p.name.substring(0, 10), x + 15, barY + 12);
+        ctx.fillStyle = '#ddd';
+        ctx.font = '9px sans-serif';
+        ctx.fillText(p.name.substring(0, 8), x + 10, barY + 6);
 
-        // Bar Track
-        ctx.fillStyle = '#21262d';
-        ctx.fillRect(x + 90, barY, 100, 12);
+        // tiny bar
+        ctx.fillStyle = '#444';
+        ctx.fillRect(x + 60, barY, 80, 6);
 
-        // Bar Fill
-        const barGrad = ctx.createLinearGradient(x + 90, 0, x + 190, 0);
-        if (p.id === myId) {
-            barGrad.addColorStop(0, '#388bfd');
-            barGrad.addColorStop(1, '#79c0ff');
-        } else {
-            barGrad.addColorStop(0, '#f78166');
-            barGrad.addColorStop(1, '#ffa657');
-        }
-        ctx.fillStyle = barGrad;
-        ctx.fillRect(x + 90, barY, 100 * progress, 12);
+        ctx.fillStyle = p.id === myId ? '#3d5afe' : '#f78166';
+        ctx.fillRect(x + 60, barY, 80 * progress, 6);
 
         if (p.finished) {
-            ctx.fillStyle = '#f2cc60';
-            ctx.fillText("🏆", x + 195, barY + 12);
+            ctx.fillStyle = '#ffd700';
+            ctx.fillText("★", x + 142, barY + 6);
         }
     });
+    ctx.restore();
 };
 

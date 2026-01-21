@@ -32,6 +32,8 @@ module.exports = (io) => {
         socket.on('start_game', ({ code }) => {
             const room = getRoom(code);
             if (room) {
+                // Ensure the starter (Host) is actually in the socket room (fix for reconnects)
+                socket.join(code);
                 // Generate consistent map for everyone
                 const gameMap = generateTrack(5000); // 5000px length for now
                 room.gameState = 'racing';

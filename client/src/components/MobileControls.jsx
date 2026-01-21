@@ -20,50 +20,55 @@ const MobileControls = () => {
         simulateKey(key, 'keyup');
     };
 
-    // Button Styles
-    const btnStyle = "w-16 h-16 rounded-full bg-white/20 border-2 border-white/50 backdrop-blur-sm flex items-center justify-center active:bg-white/40 transition-all text-white font-bold select-none touch-none";
+    // Simplified Modern Button Styles
+    const btnBase = "rounded-full flex items-center justify-center text-white font-bold backdrop-blur-sm transition-all active:scale-95 select-none touch-none shadow-lg";
+
+    // Run Button (Large, Left)
+    const runBtn = `${btnBase} w-24 h-24 bg-blue-600/40 border-2 border-blue-400/50 active:bg-blue-600/60`;
+
+    // Action Buttons (Right) - Removed bottom margin from jumpBtn
+    const jumpBtn = `${btnBase} w-20 h-20 bg-green-600/40 border-2 border-green-400/50 active:bg-green-600/60`;
+    const slideBtn = `${btnBase} w-20 h-20 bg-red-600/40 border-2 border-red-400/50 active:bg-red-600/60`;
 
     return (
-        <div className="absolute inset-0 pointer-events-none z-50 flex flex-col justify-end pb-10 px-6">
-            <div className="flex justify-between items-end w-full pointer-events-auto">
-                {/* Left Side: Run (Right Arrow) */}
-                <div className="flex gap-4">
-                    <button
-                        className={`${btnStyle} w-20 h-20 bg-blue-500/30`}
-                        onTouchStart={handleTouchStart('ArrowRight')}
-                        onTouchEnd={handleTouchEnd('ArrowRight')}
-                        onMouseDown={handleTouchStart('ArrowRight')} // For testing on PC
-                        onMouseUp={handleTouchEnd('ArrowRight')}
-                    >
-                        RUN ▶
-                    </button>
-                </div>
+        <div className="w-full h-full flex justify-between items-end px-8 pb-4">
+            <div className="flex items-center">
+                <button
+                    className={runBtn}
+                    onTouchStart={handleTouchStart('ArrowRight')}
+                    onTouchEnd={handleTouchEnd('ArrowRight')}
+                    onMouseDown={handleTouchStart('ArrowRight')}
+                    onMouseUp={handleTouchEnd('ArrowRight')}
+                >
+                    <span className="tracking-wider">RUN</span>
+                </button>
+            </div>
 
-                {/* Right Side: Jump & Slide */}
-                <div className="flex gap-4 flex-col">
-                    <button
-                        className={`${btnStyle} bg-green-500/30 mb-4`}
-                        onTouchStart={handleTouchStart('Space')}
-                        onTouchEnd={handleTouchEnd('Space')}
-                        onMouseDown={handleTouchStart('Space')}
-                        onMouseUp={handleTouchEnd('Space')}
-                    >
-                        JUMP
-                    </button>
+            {/* RIGHT: JUMP & SLIDE (Side by Side) */}
+            <div className="flex items-end gap-4">
+                <button
+                    className={slideBtn}
+                    onTouchStart={handleTouchStart('ArrowDown')}
+                    onTouchEnd={handleTouchEnd('ArrowDown')}
+                    onMouseDown={handleTouchStart('ArrowDown')}
+                    onMouseUp={handleTouchEnd('ArrowDown')}
+                >
+                    SLIDE
+                </button>
 
-                    <button
-                        className={`${btnStyle} bg-red-500/30`}
-                        onTouchStart={handleTouchStart('ArrowDown')}
-                        onTouchEnd={handleTouchEnd('ArrowDown')}
-                        onMouseDown={handleTouchStart('ArrowDown')}
-                        onMouseUp={handleTouchEnd('ArrowDown')}
-                    >
-                        SLIDE
-                    </button>
-                </div>
+                <button
+                    className={jumpBtn}
+                    onTouchStart={handleTouchStart('Space')}
+                    onTouchEnd={handleTouchEnd('Space')}
+                    onMouseDown={handleTouchStart('Space')}
+                    onMouseUp={handleTouchEnd('Space')}
+                >
+                    JUMP
+                </button>
             </div>
         </div>
     );
 };
 
 export default MobileControls;
+
