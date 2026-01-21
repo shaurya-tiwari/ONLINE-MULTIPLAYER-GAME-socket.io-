@@ -13,9 +13,13 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
     cors: {
-        origin: "*",   // Render and production 
+        origin: "*",
         methods: ["GET", "POST"]
-    }
+    },
+    transports: ["websocket"],     // force pure websocket
+    pingInterval: 10000,
+    pingTimeout: 5000,
+    perMessageDeflate: false       // disable compression = faster
 });
 
 socketHandler(io);
@@ -24,7 +28,7 @@ socketHandler(io);
 const PORT = process.env.PORT || 3000;
 
 /* ===============================
-   FRONTEND SERVE SECTION
+FRONTEND SERVE SECTION
 ================================ */
 
 app.use(express.static(path.join(__dirname, "../client/dist")));

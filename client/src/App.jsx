@@ -5,9 +5,13 @@ import LobbyScreen from './screens/LobbyScreen';
 import GameScreen from './screens/GameScreen';
 
 const socket = io(
-window.location.hostname === "localhost"
-    ? "http://localhost:3000"
-    : undefined
+    window.location.hostname === "localhost"
+        ? "http://localhost:3000"
+        : undefined,
+    {
+        transports: ["websocket"],
+        reconnectionAttempts: 5
+    }
 );
 
 function App() {
