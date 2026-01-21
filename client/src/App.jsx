@@ -3,6 +3,7 @@ import io from 'socket.io-client';
 import HomeScreen from './screens/HomeScreen';
 import LobbyScreen from './screens/LobbyScreen';
 import GameScreen from './screens/GameScreen';
+import pageBg from './assets/page/page.jpg';
 
 const socket = io(
     import.meta.env.VITE_SERVER_URL ||
@@ -94,7 +95,14 @@ function App() {
     };
 
     return (
-        <div className="min-h-screen w-full flex justify-center items-center bg-gray-900 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-gray-800 via-gray-900 to-black text-white overflow-hidden selection:bg-blue-500/30">
+        <div
+            className="min-h-screen w-full flex justify-center items-center text-white overflow-hidden selection:bg-blue-500/30"
+            style={{
+                backgroundImage: `url(${pageBg})`,
+                backgroundRepeat: 'repeat',
+                backgroundSize: 'auto'
+            }}
+        >
             {screen === 'home' && (
                 <HomeScreen
                     onHost={handleStartHost}

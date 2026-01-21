@@ -213,9 +213,8 @@ const render = () => {
 
     updateParticles();
 
-    // 1. Sky & Background
-    ctx.fillStyle = '#fdfbf7';
-    ctx.fillRect(0, 0, canvas.width, canvas.height); // Clear screen
+    // 1. Sky & Background (Transparent to show page.jpg from App.jsx)
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     if (canvas.width === 0 || canvas.height === 0) return;
 
