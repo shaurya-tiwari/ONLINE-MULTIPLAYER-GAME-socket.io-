@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { startGameLoop, stopGameLoop } from '../game/gameLoop';
 import MobileControls from '../components/MobileControls';
 import GameOverOverlay from '../components/GameOverOverlay';
+import CanvasCover from '../components/CanvasCover';
 
 const GameScreen = ({ socket, roomCode, playerId, players, gameMap }) => {
     const canvasRef = useRef(null);
@@ -71,6 +72,9 @@ const GameScreen = ({ socket, roomCode, playerId, players, gameMap }) => {
             {/* Main Game Container - Transparent to see paper bg */}
             <div className="relative w-full max-w-6xl aspect-video bg-transparent shadow-none overflow-hidden shrink-0 border-2 border-black/50">
                 <canvas ref={canvasRef} className="block w-full h-full object-contain" />
+
+                {/* Canvas Cover (Grass Overlay) */}
+                <CanvasCover />
 
                 {/* HUD Layer */}
                 <div className="absolute top-4 left-4 pointer-events-none z-10">
