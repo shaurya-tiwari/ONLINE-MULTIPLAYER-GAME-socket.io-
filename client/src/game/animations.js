@@ -11,7 +11,8 @@ export const drawStickman = (ctx, x, y, state, frame, color, facingRight = true)
     // Center the image in the bounding box (x,y is top-left 40x60 box)
     // We draw it slightly offset to center it
     const drawX = x - 40;
-    const drawY = y - 60;
+    // OFFSET: +15px to push player down to ground line
+    const drawY = y - 55 + 15;
 
     if (state === 'jump') {
         drawJumpStickman(ctx, drawX, drawY, width, height, frame);
@@ -24,7 +25,9 @@ export const drawStickman = (ctx, x, y, state, frame, color, facingRight = true)
     }
 
     if (state === 'slide') {
-        drawSlideStickman(ctx, drawX, drawY, width, height, frame);
+        // Slide needs to be lifted up slightly compared to others
+        // because the physics box is lower, or the sprite center is different
+        drawSlideStickman(ctx, drawX, drawY - 25, width, height, frame);
         return;
     }
 
