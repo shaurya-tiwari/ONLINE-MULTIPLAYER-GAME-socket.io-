@@ -2,21 +2,37 @@
 const treeImages = import.meta.glob('../assets/trees/*.{png,jpg,jpeg,svg}', { eager: true });
 const groundObImages = import.meta.glob('../assets/obstacles/ground/*.{png,jpg,jpeg,svg}', { eager: true });
 const airObImages = import.meta.glob('../assets/obstacles/air/*.{png,jpg,jpeg,svg}', { eager: true });
+const jumpImagesGlob = import.meta.glob('../assets/jump images/*.{png,jpg,jpeg,svg}', { eager: true });
+const runImagesGlob = import.meta.glob('../assets/run/*.{png,jpg,jpeg,svg}', { eager: true });
+const slideImagesGlob = import.meta.glob('../assets/slide/*.{png,jpg,jpeg,svg}', { eager: true });
 
 // Convert object to array of values (modules)
 const getModules = (globResult) => {
-    return Object.values(globResult).map(mod => mod.default);
+    // Sort keys to ensure animation order (jump1, jump2, jump 3, jump4)
+    // We try to find numbers in the filenames and sort by that
+    const sortedKeys = Object.keys(globResult).sort((a, b) => {
+        const numA = (a.match(/\d+/) || [0])[0];
+        const numB = (b.match(/\d+/) || [0])[0];
+        return parseInt(numA) - parseInt(numB);
+    });
+    return sortedKeys.map(key => globResult[key].default);
 };
 
 const trees = getModules(treeImages);
 const groundObs = getModules(groundObImages);
 const airObs = getModules(airObImages);
+const jumpFrames = getModules(jumpImagesGlob);
+const runFrames = getModules(runImagesGlob);
+const slideFrames = getModules(slideImagesGlob);
 
 // Helper to pre-load images
 const loadedImages = {
     trees: [],
     ground: [],
-    air: []
+    air: [],
+    jump: [],
+    run: [],
+    slide: []
 };
 
 const preload = (srcArray, targetArray) => {
@@ -30,12 +46,18 @@ const preload = (srcArray, targetArray) => {
 preload(trees, loadedImages.trees);
 preload(groundObs, loadedImages.ground);
 preload(airObs, loadedImages.air);
+preload(jumpFrames, loadedImages.jump);
+preload(runFrames, loadedImages.run);
+preload(slideFrames, loadedImages.slide);
 
 export const getAsset = (type, index) => {
     let arr = [];
     if (type === 'tree') arr = loadedImages.trees;
     else if (type === 'ground') arr = loadedImages.ground;
     else if (type === 'air') arr = loadedImages.air;
+    else if (type === 'jump') arr = loadedImages.jump;
+    else if (type === 'run') arr = loadedImages.run;
+    else if (type === 'slide') arr = loadedImages.slide;
 
     if (arr.length === 0) return null;
 

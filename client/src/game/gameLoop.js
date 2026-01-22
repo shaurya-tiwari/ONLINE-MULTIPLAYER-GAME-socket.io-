@@ -213,14 +213,14 @@ const render = () => {
 
     updateParticles();
 
-    // 1. Sky & Background (Transparent to show page.jpg from App.jsx)
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // 1. Sky & Background
+    ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear
 
     if (canvas.width === 0 || canvas.height === 0) return;
 
     ctx.save();
 
-    // Scaling Logic
+    // Scaling Logic (Corrected: Scale THEN Translate)
     const BASE_HEIGHT = 600;
     const scaleFactor = Math.max(0.1, canvas.height / BASE_HEIGHT);
     ctx.scale(scaleFactor, scaleFactor);
@@ -229,188 +229,177 @@ const render = () => {
     // 2. Ground
     const groundY = 500;
 
-    // Draw Ground Line
-    ctx.strokeStyle = '#000';
+    // Ground Line with Shadow
+    ctx.shadowColor = 'rgba(0,0,0,0.1)';
+    ctx.shadowBlur = 10;
+    ctx.strokeStyle = '#222'; // Darker, cleaner ground
     ctx.lineWidth = 4;
     ctx.beginPath();
     ctx.moveTo(0, groundY);
     ctx.lineTo(MAP_LENGTH + 2000, groundY);
     ctx.stroke();
+    ctx.shadowBlur = 0; // Reset
 
-    // Scribble shading
+    // Subtle Ground Details (Less scratchy)
     ctx.strokeStyle = '#e0e0e0';
-    ctx.lineWidth = 1;
-
+    ctx.lineWidth = 2;
     // Visible world X range calculation
-    const startX = Math.floor(cameraX / 20) * 20;
+    const startX = Math.floor(cameraX / 50) * 50;
     const endX = startX + (canvas.width / scaleFactor) + 100;
 
-    for (let x = startX; x < endX; x += 20) {
+    ctx.beginPath();
+    for (let x = startX; x < endX; x += 100) {
         if (x > MAP_LENGTH + 2000) break;
-        ctx.beginPath();
         ctx.moveTo(x, groundY);
-        ctx.lineTo(x - 20, 600); // Draw down to base height to cover view
-        ctx.stroke();
+        ctx.lineTo(x - 15, groundY + 15); // Simple hash marks
     }
+    ctx.stroke();
 
 
     // 2.5 Particles
     particles.forEach(p => {
-        ctx.strokeStyle = '#000';
-        ctx.lineWidth = 1;
+        ctx.globalAlpha = Math.max(0, p.life); // Fade out
+        ctx.fillStyle = '#888';
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.stroke();
-        if (p.size > 3) {
-            ctx.fillStyle = '#000';
-            ctx.fill();
-        }
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
     });
 
-    // Finish Line Banner
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 2;
-    for (let i = 0; i < 20; i++) {
-        const x = MAP_LENGTH + (i * 15);
-        ctx.strokeRect(x, groundY, 15, 15);
-        if (i % 2 === 0) {
-            ctx.beginPath();
-            ctx.moveTo(x, groundY);
-            ctx.lineTo(x + 15, groundY + 15);
-            ctx.moveTo(x + 15, groundY);
-            ctx.lineTo(x, groundY + 15);
-            ctx.stroke();
-        }
+    // Finish Line
+    ctx.fillStyle = '#222';
+    for (let i = 0; i < 4; i++) { // Checkered post
+        ctx.fillRect(MAP_LENGTH, groundY - 300 + (i * 75), 10, 37.5);
     }
-
-    // Visual Finish Post
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#222';
     ctx.strokeRect(MAP_LENGTH, groundY - 300, 10, 300);
 
     // Flag
+    ctx.fillStyle = '#ef5350';
     ctx.beginPath();
-    ctx.moveTo(MAP_LENGTH - 100, groundY - 300);
-    ctx.lineTo(MAP_LENGTH, groundY - 300);
+    ctx.moveTo(MAP_LENGTH, groundY - 300);
+    ctx.lineTo(MAP_LENGTH - 100, groundY - 275);
     ctx.lineTo(MAP_LENGTH, groundY - 250);
-    ctx.closePath();
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(MAP_LENGTH - 90, groundY - 290);
-    ctx.lineTo(MAP_LENGTH - 10, groundY - 260);
-    ctx.stroke();
+    ctx.fill();
 
-    ctx.fillStyle = '#000';
-    ctx.font = 'bold 24px "Courier New", monospace';
-    ctx.fillText("FINISH", MAP_LENGTH - 50, groundY - 220);
+    ctx.fillStyle = '#222';
+    ctx.font = '900 32px "Inter", "Segoe UI", sans-serif'; // Modern Bold Font
+    ctx.fillText("FINISH", MAP_LENGTH + 20, groundY - 150);
+
 
     // 3. Map Objects
     if (mapData) {
-        // Optimize Loop: Only draw visible objects
-        // Simple culling can be done if objects are sorted, but for <100 objects generic loop is fine
-        // Just checking bounds helps a bit if map is huge
-
+        // Trees
         mapData.trees.forEach((tree, index) => {
-            // Culling check
-            if (tree.x + tree.w < cameraX || tree.x > cameraX + (canvas.width / scaleFactor)) return;
+            // Culling
+            if (tree.x + (tree.w * 2) < cameraX || tree.x > cameraX + (canvas.width / scaleFactor)) return;
 
             const img = getAsset('tree', index);
+
+            // Fix Tree Alignment: Align bottom of tree to groundY
+            // We are scaling trees up (user request), so we calculate visual dimensions first.
+            const drawW = tree.w * 2;   // Bigger width
+            const drawH = tree.h * 1.5; // Bigger height
+            const drawX = tree.x;
+            const drawY = groundY - drawH; // Force bottom alignment
+
             if (img) {
-                ctx.strokeStyle = '#aaa';
-                ctx.lineWidth = 2;
+                // Soft shadow for tree
+                ctx.fillStyle = 'rgba(0,0,0,0.1)';
                 ctx.beginPath();
-                ctx.ellipse(tree.x + tree.w / 2, groundY, tree.w / 2, 10, 0, 0, Math.PI * 2);
-                ctx.stroke();
+                ctx.ellipse(drawX + drawW / 2, groundY, drawW / 3, 8, 0, 0, Math.PI * 2);
+                ctx.fill();
 
-                ctx.drawImage(img, tree.x, tree.y, tree.w, tree.h);
+                ctx.drawImage(img, drawX, drawY, drawW, drawH);
             } else {
-                const tx = tree.x;
-                const bottomY = groundY;
-                const tw = tree.w * 1.5;
-                const th = tree.h * 1.5;
-
-                ctx.strokeStyle = '#000';
-                ctx.lineWidth = 3;
+                // Fallback Tree
+                ctx.fillStyle = '#4caf50';
                 ctx.beginPath();
-                ctx.moveTo(tx + tw / 2 - 10, bottomY);
-                ctx.lineTo(tx + tw / 2 - 10, bottomY - th / 2);
-                ctx.lineTo(tx + tw / 2 + 10, bottomY - th / 2);
-                ctx.lineTo(tx + tw / 2 + 10, bottomY);
-                ctx.stroke();
-
-                ctx.beginPath();
-                ctx.arc(tx + tw / 2, bottomY - th / 2 - 20, 40, 0, Math.PI * 2);
-                ctx.arc(tx + tw / 2 - 30, bottomY - th / 2 + 10, 30, 0, Math.PI * 2);
-                ctx.arc(tx + tw / 2 + 30, bottomY - th / 2 + 10, 30, 0, Math.PI * 2);
-                ctx.stroke();
-
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.arc(tx + tw / 2 - 10, bottomY - th / 2 - 10, 10, 0, Math.PI);
-                ctx.stroke();
+                ctx.moveTo(drawX + drawW / 2, drawY);
+                ctx.lineTo(drawX, drawY + drawH);
+                ctx.lineTo(drawX + drawW, drawY + drawH);
+                ctx.fill();
             }
         });
 
+        // Obstacles
         mapData.obstacles.forEach((obs, index) => {
             if (obs.x + obs.w < cameraX || obs.x > cameraX + (canvas.width / scaleFactor)) return;
 
             const img = getAsset(obs.type, index);
+            // Obstacles are already large from server update (120x120), render as is or slight visual adjustment
+            const drawW = obs.w;
+            const drawH = obs.h;
+            // Align Y? Server sends logical Y.
+            // If Air, Y is calculated. If Ground, Y is calculated. 
+            // Just trust server Y for obstacles, but maybe add shadow.
 
             if (img) {
-                ctx.drawImage(img, obs.x, obs.y, obs.w, obs.h);
+                ctx.drawImage(img, obs.x, obs.y, drawW, drawH);
             } else {
-                ctx.strokeStyle = '#000';
-                ctx.lineWidth = 4;
-                ctx.strokeRect(obs.x, obs.y, obs.w, obs.h);
-
-                ctx.lineWidth = 2;
+                ctx.fillStyle = obs.type === 'air' ? '#ef5350' : '#ffa726';
                 ctx.beginPath();
-                for (let i = 0; i < obs.w + obs.h; i += 10) {
-                    ctx.moveTo(obs.x + i, obs.y);
-                    ctx.lineTo(obs.x + i - 20, obs.y + obs.h);
-                }
-                ctx.save();
-                ctx.rect(obs.x, obs.y, obs.w, obs.h);
-                ctx.clip();
+                ctx.roundRect(obs.x, obs.y, drawW, drawH, 10);
+                ctx.fill();
+                ctx.strokeStyle = '#222';
+                ctx.lineWidth = 2;
                 ctx.stroke();
-                ctx.restore();
             }
+
+            // Shadow for obstacles
+            ctx.fillStyle = 'rgba(0,0,0,0.15)';
+            ctx.beginPath();
+            // Shadow on ground for Air objects too? Yes, accurately projected below
+            const shadowY = groundY;
+            ctx.ellipse(obs.x + drawW / 2, shadowY, drawW / 2.2, 8, 0, 0, Math.PI * 2);
+            ctx.fill();
         });
     }
 
     // 4. Players
     Object.values(users).forEach(player => {
-        const color = '#000';
-
-        ctx.strokeStyle = '#aaa';
-        ctx.lineWidth = 1;
+        // Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
         ctx.beginPath();
-        const shadowScale = 1 - (groundY - (player.y + player.h)) / 200;
-        ctx.ellipse(player.x + player.w / 2, groundY, (player.w / 2) * shadowScale, 5 * shadowScale, 0, 0, Math.PI * 2);
-        ctx.stroke();
+        // Scale shadow based on height (jump)
+        const distFromGround = Math.max(0, (groundY - (player.y + player.h)));
+        const shadowScale = Math.max(0.5, 1 - distFromGround / 200);
 
+        ctx.ellipse(player.x + player.w / 2, groundY, (player.w / 1.5) * shadowScale, 6 * shadowScale, 0, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Stickman
+        const color = '#000';
         drawStickman(ctx, player.x, player.y, player.state, frameCount, color);
 
-        ctx.strokeStyle = '#000';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(player.x + player.w / 2 - 40, player.y - 35, 80, 20);
+        // Name Tag (Clean Badge Style)
+        ctx.font = 'bold 14px "Inter", "Segoe UI", sans-serif';
+        const name = player.name || "Player";
+        const textMetrics = ctx.measureText(name);
+        const textWidth = textMetrics.width;
+        const padding = 8;
+        const badgeW = textWidth + (padding * 2);
+        const badgeH = 24;
+        const badgeX = player.x + (player.w / 2) - (badgeW / 2);
+        const badgeY = player.y - 40;
 
-        ctx.fillStyle = '#000';
-        ctx.font = '12px "Courier New", monospace';
+        // Badge Background
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)'; // Semi-transparent black
+        ctx.beginPath();
+        ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 12); // Round pills
+        ctx.fill();
+
+        // Badge Text
+        ctx.fillStyle = '#fff';
         ctx.textAlign = 'center';
-        ctx.fillText(player.name, player.x + player.w / 2, player.y - 20);
+        ctx.textBaseline = 'middle';
+        ctx.fillText(name, badgeX + badgeW / 2, badgeY + badgeH / 2 + 1); // +1 visual center correction
     });
 
     ctx.restore();
 
-    // 5. HUD - drawn separate from game scale to keep text readable/fixed size if desired, 
-    // OR scaled if we want it to shrink.
-    // User asked to fix clutter, usually HUD should probably stay roughly same size relative to SCREEN or relative to Game?
-    // "production level" usually implies UI scales with screen, but readability is key.
-    // Let's keep existing HUD render separate (it draws on top of everything). 
-    // BUT we need to check renderHUD to see if it uses absolute pixels. 
-    // renderHUD uses (canvas.width - ...) so it adapts to width.
-    // We should probably NOT scale the HUD with the game world zoom, but let it adapt to canvas dimensions naturally.
+    // 5. HUD - Screen Space
     renderHUD();
 
     if (users[myId] && users[myId].finished) {
@@ -419,100 +408,104 @@ const render = () => {
 };
 
 const renderGameOver = () => {
+    // Backdrop
+    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    gradient.addColorStop(0, 'rgba(20, 20, 30, 0.9)');
+    gradient.addColorStop(1, 'rgba(40, 40, 60, 0.95)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
     const cx = canvas.width / 2;
     const cy = canvas.height / 2;
 
-    const overlayGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, canvas.width / 2);
-    overlayGrad.addColorStop(0, 'rgba(0, 0, 0, 0.8)');
-    overlayGrad.addColorStop(1, 'rgba(0, 0, 0, 0.4)');
-    ctx.fillStyle = overlayGrad;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    ctx.fillStyle = '#FFF';
-    ctx.font = 'black 60px "Segoe UI", sans-serif';
-    ctx.textAlign = 'center';
-    ctx.shadowColor = '#3d5afe';
+    // Title
+    ctx.shadowColor = 'rgba(0,0,0,0.5)';
     ctx.shadowBlur = 20;
-    ctx.fillText("RACE FINISHED!", cx, cy - 40);
+    ctx.shadowOffsetY = 10;
+    ctx.fillStyle = '#fff';
+    ctx.font = '900 64px "Inter", "Segoe UI", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText("RACE FINISHED", cx, cy - 60);
 
-    // Draw Restart Button
     ctx.shadowBlur = 0;
-    const btnX = cx - 120;
-    const btnY = cy + 20;
-    const btnW = 240;
-    const btnH = 60;
+    ctx.shadowOffsetY = 0;
 
-    const btnGrad = ctx.createLinearGradient(btnX, btnY, btnX, btnY + btnH);
-    btnGrad.addColorStop(0, '#3d5afe');
-    btnGrad.addColorStop(1, '#1a237e');
+    // Button
+    const btnW = 260;
+    const btnH = 64;
+    const btnX = cx - btnW / 2;
+    const btnY = cy + 40;
 
-    ctx.fillStyle = btnGrad;
+    // Pulse
+    const pulse = Math.sin(frameCount * 0.1) * 3;
+
+    ctx.fillStyle = '#3d5afe'; // Primary Blue
     ctx.beginPath();
-    ctx.roundRect(btnX, btnY, btnW, btnH, 15);
+    ctx.roundRect(btnX - pulse, btnY - pulse, btnW + pulse * 2, btnH + pulse * 2, 16);
     ctx.fill();
 
-    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    ctx.fillStyle = 'white';
-    ctx.font = 'bold 22px sans-serif';
-    ctx.fillText("RESTART GAME", cx, cy + 58);
-
-    // Subtle pulsing effect for button text
-    if (Math.sin(frameCount * 0.1) > 0) {
-        ctx.fillStyle = 'rgba(255,255,255,0.2)';
-        ctx.fillText("RESTART GAME", cx, cy + 58);
-    }
+    // Text
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 24px "Inter", sans-serif';
+    ctx.fillText("PLAY AGAIN", cx, cy + 82);
 };
 
 const renderHUD = () => {
-    // Mini Leaderboard
-    const padding = 10;
-    const boardW = 150; // Smaller width
+    const padding = 20;
+    const boardW = 220;
     const x = canvas.width - boardW - padding;
     const y = padding;
 
-    // Use a smaller height based on player count, max 80px
-    const boardH = Math.min(100, 30 + (Object.keys(users).length * 20));
+    const sortedPlayers = Object.values(users).sort((a, b) => b.x - a.x);
+    const boardH = 50 + (sortedPlayers.length * 36);
 
+    // Glassmorphism Panel
     ctx.save();
-    // Do not scale HUD with game world, keep it screen-space but small
+    ctx.shadowColor = 'rgba(0,0,0,0.2)';
+    ctx.shadowBlur = 15;
+    ctx.shadowOffsetY = 5;
 
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.fillStyle = 'rgba(30, 30, 30, 0.85)';
     ctx.beginPath();
-    ctx.roundRect(x, y, boardW, boardH, 8);
+    ctx.roundRect(x, y, boardW, boardH, 16);
     ctx.fill();
 
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 10px sans-serif'; // Tiny font
+    // Header
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+    ctx.fillStyle = '#aaa';
+    ctx.font = '600 11px "Inter", sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillText("LEADERBOARD", x + 10, y + 15);
+    ctx.fillText("LEADERBOARD", x + 16, y + 26);
 
-    const sortedPlayers = Object.values(users).sort((a, b) => b.x - a.x);
-
+    // Rows
+    ctx.font = '600 13px "Inter", sans-serif';
     sortedPlayers.forEach((p, index) => {
-        const barY = y + 25 + (index * 15);
-        if (barY > y + boardH - 10) return; // Clip
+        const rowY = y + 50 + (index * 36);
 
+        // Rank/Name
+        ctx.fillStyle = p.id === myId ? '#fff' : '#ccc';
+        const nameStr = p.name.length > 10 ? p.name.substring(0, 9) + '..' : p.name;
+        ctx.fillText(`${index + 1}. ${nameStr}`, x + 16, rowY);
+
+        // Progress Bar Background
+        const barW = 80;
+        const barX = x + boardW - barW - 16;
+        ctx.fillStyle = 'rgba(255,255,255,0.1)';
+        ctx.beginPath();
+        ctx.roundRect(barX, rowY - 8, barW, 8, 4);
+        ctx.fill();
+
+        // Progress Fill
         const progress = Math.min(p.x / MAP_LENGTH, 1);
-
-        ctx.fillStyle = '#ddd';
-        ctx.font = '9px sans-serif';
-        ctx.fillText(p.name.substring(0, 8), x + 10, barY + 6);
-
-        // tiny bar
-        ctx.fillStyle = '#444';
-        ctx.fillRect(x + 60, barY, 80, 6);
-
-        ctx.fillStyle = p.id === myId ? '#3d5afe' : '#f78166';
-        ctx.fillRect(x + 60, barY, 80 * progress, 6);
-
-        if (p.finished) {
-            ctx.fillStyle = '#ffd700';
-            ctx.fillText("★", x + 142, barY + 6);
-        }
+        ctx.fillStyle = p.finished ? '#ffd700' : (p.id === myId ? '#3d5afe' : '#ff7043');
+        ctx.beginPath();
+        // Clamped width
+        const fillW = Math.max(8, barW * progress);
+        ctx.roundRect(barX, rowY - 8, fillW, 8, 4);
+        ctx.fill();
     });
+
     ctx.restore();
 };
 
