@@ -42,3 +42,13 @@ export const getAsset = (type, index) => {
     // Use modulo to cycle through available images deterministically
     return arr[index % arr.length];
 };
+
+// Stickman Assets
+import stickmanStillSrc from '../assets/stickman/stickmanStill.png';
+import stickmanGifSrc from '../assets/stickman/stickman.gif';
+
+export const stickmanStill = new Image();
+stickmanStill.src = stickmanStillSrc;
+
+export const stickmanGif = new Image();
+stickmanGif.src = stickmanGifSrc;

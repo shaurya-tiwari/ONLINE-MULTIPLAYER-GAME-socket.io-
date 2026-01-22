@@ -96,7 +96,7 @@ function App() {
 
     return (
         <div
-            className="min-h-screen w-full flex justify-center items-center text-white overflow-hidden selection:bg-blue-500/30"
+            className="min-h-screen w-full flex justify-center items-center text-black overflow-hidden selection:bg-blue-500/30"
             style={{
                 backgroundImage: `url(${pageBg})`,
                 backgroundRepeat: 'repeat',
