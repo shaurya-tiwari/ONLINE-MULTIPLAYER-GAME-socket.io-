@@ -38,6 +38,19 @@ export const drawStickman = (ctx, x, y, state, frame, color, facingRight = true)
     if (img && img.complete) {
         ctx.save();
 
+        // Juice: Suble Lean & Squish
+        ctx.translate(drawX + width / 2, drawY + height);
+
+        let rot = 0;
+        let scaleY = 1.0;
+        if (state === 'run') rot = 0.05; // Lean forward
+        if (state === 'jump') rot = -0.05; // Kick back
+        if (state === 'idle') scaleY = 1.0 + Math.sin(frame * 0.1) * 0.02; // Breathing
+
+        ctx.rotate(rot);
+        ctx.scale(1.0, scaleY);
+        ctx.translate(-(drawX + width / 2), -(drawY + height));
+
         ctx.drawImage(img, drawX, drawY, width, height);
 
         ctx.restore();

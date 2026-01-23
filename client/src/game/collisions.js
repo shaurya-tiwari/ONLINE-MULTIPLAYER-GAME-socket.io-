@@ -1,3 +1,5 @@
+import { triggerShake } from '../game-features/cameraShake';
+
 export const checkCollision = (player, obstacle) => {
     // Simple AABB Collision
     return (
@@ -29,6 +31,7 @@ export const handleCollisions = (player, obstacles) => {
             // BUT only if we are hitting it from the left
             if (player.x + player.w > obs.x && player.x < obs.x) {
                 player.x = obs.x - player.w;
+                triggerShake(8, 15); // Hit Shake
             }
 
             return true; // Collision detected

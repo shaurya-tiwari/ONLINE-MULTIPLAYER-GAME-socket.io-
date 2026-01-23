@@ -4,6 +4,11 @@ import { drawStickman } from './animations';
 import { getAsset } from './AssetLoader';
 import { getFinishLinePosition } from '../constants/raceLength';
 
+// Juice Features
+import { getShakeOffset, triggerShake } from '../game-features/cameraShake';
+import { updateVisualEffects, drawWorldEffects, drawScreenEffects, createDustPuff } from '../game-features/visualEffects';
+
+
 let animationFrameId;
 let ctx;
 let canvas;
@@ -180,6 +185,7 @@ const update = () => {
         player.state = 'idle'; // Stop moving
         if (!player.finished) {
             player.finished = true;
+            triggerShake(10, 30); // Win Shake!
             if (socketRef && roomCodeRef) {
                 socketRef.emit('player_won', {
                     code: roomCodeRef,
@@ -189,7 +195,7 @@ const update = () => {
             }
         }
     } else {
-        updatePlayerPhysics(player, inputs);
+        updatePlayerPhysics(player, inputs, frameCount);
     }
 
     if (mapData && mapData.obstacles) {
@@ -244,40 +250,16 @@ export const updateRemotePlayers = () => {
 };
 
 
-// Particle System State
-let particles = [];
-
-const createDust = (x, y) => {
-    for (let i = 0; i < 3; i++) {
-        particles.push({
-            x,
-            y,
-            vx: (Math.random() - 0.5) * 2 - 2, // Puff backwards
-            vy: (Math.random() - 0.5) * 1,
-            life: 1.0,
-            size: Math.random() * 5 + 2
-        });
-    }
-};
-
-const updateParticles = () => {
-    // In-place update to avoid GC churn from .filter()
-    for (let i = particles.length - 1; i >= 0; i--) {
-        const p = particles[i];
-        p.x += p.vx;
-        p.y += p.vy;
-        p.life -= 0.02;
-        if (p.life <= 0) {
-            particles.splice(i, 1);
-        }
-    }
-};
+// Redundant local particle system removed - moved to visualEffects.js
 
 const render = () => {
     if (!ctx || !canvas) return;
 
+    // Juice Features Update
+    const { currentZoom } = updateVisualEffects(users[myId]?.vx || 0, inputs.right);
+    const shake = getShakeOffset();
+
     updateRemotePlayers(); // Update remote smoothed positions
-    updateParticles();
 
     // 1. Sky & Background
     ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear
@@ -286,16 +268,20 @@ const render = () => {
 
     ctx.save();
 
-    // Scaling Logic (Dual-axis scale based on base height of 600)
+    // Scaling Logic (Dual-axis scale + Dynamic Zoom)
     const BASE_HEIGHT = 600;
     const BASE_WIDTH = 1000;
-    // Scale based on whichever dimension is more restrictive to avoid content clipping
     const scaleFactorHeight = canvas.height / BASE_HEIGHT;
     const scaleFactorWidth = canvas.width / BASE_WIDTH;
-    const scaleFactor = Math.max(0.2, Math.min(scaleFactorHeight, scaleFactorWidth * 1.5)); // Allow some wide stretch
+    const baseScale = Math.max(0.2, Math.min(scaleFactorHeight, scaleFactorWidth * 1.5));
 
-    ctx.scale(scaleFactor, scaleFactor);
-    ctx.translate(-cameraX, 0);
+    // Apply Juice Zoom and Shake
+    ctx.scale(baseScale * currentZoom, baseScale * currentZoom);
+    ctx.translate(-cameraX + shake.x, shake.y);
+
+    // Render Dust Effects behind objects
+    drawWorldEffects(ctx);
+
 
     // 2. Ground
     const groundY = 500;
@@ -316,7 +302,7 @@ const render = () => {
     ctx.lineWidth = 2;
     // Visible world X range calculation
     const startX = Math.floor(cameraX / 50) * 50;
-    const endX = startX + (canvas.width / scaleFactor) + 100;
+    const endX = startX + (canvas.width / (baseScale * currentZoom)) + 100;
 
     ctx.beginPath();
     for (let x = startX; x < endX; x += 100) {
@@ -327,15 +313,9 @@ const render = () => {
     ctx.stroke();
 
 
-    // 2.5 Particles
-    particles.forEach(p => {
-        ctx.globalAlpha = Math.max(0, p.life); // Fade out
-        ctx.fillStyle = '#888';
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1.0;
-    });
+    ctx.stroke();
+
+    // 2.5 Particles Rendered via drawWorldEffects now
 
     // Finish Line
     ctx.fillStyle = '#222';
@@ -364,7 +344,7 @@ const render = () => {
         // Trees
         mapData.trees.forEach((tree, index) => {
             // Culling
-            if (tree.x + (tree.w * 2) < cameraX || tree.x > cameraX + (canvas.width / scaleFactor)) return;
+            if (tree.x + (tree.w * 2) < cameraX || tree.x > cameraX + (canvas.width / (baseScale * currentZoom))) return;
 
             const img = getAsset('tree', index);
 
@@ -396,7 +376,7 @@ const render = () => {
 
         // Obstacles
         mapData.obstacles.forEach((obs, index) => {
-            if (obs.x + obs.w < cameraX || obs.x > cameraX + (canvas.width / scaleFactor)) return;
+            if (obs.x + obs.w < cameraX || obs.x > cameraX + (canvas.width / (baseScale * currentZoom))) return;
 
             const img = getAsset(obs.type, index);
             // Obstacles are already large from server update (120x120), render as is or slight visual adjustment
@@ -470,7 +450,11 @@ const render = () => {
 
     ctx.restore();
 
+    // 4.5 Screen Space Effects (Speed Lines)
+    drawScreenEffects(ctx, canvas.width, canvas.height);
+
     // 5. HUD - Screen Space
+
     renderHUD();
 
     // Removed renderGameOver() as we are using React Overlay now

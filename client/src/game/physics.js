@@ -1,3 +1,6 @@
+import { triggerShake } from '../game-features/cameraShake';
+import { createDustPuff, createRunDust } from '../game-features/visualEffects';
+
 export const PHYSICS_CONSTANTS = {
     GRAVITY: 0.8,
     JUMP_FORCE: -15,
@@ -20,7 +23,7 @@ export const createPlayerState = (id, name, x = 100) => ({
     isGrounded: true
 });
 
-export const updatePlayerPhysics = (player, inputs) => {
+export const updatePlayerPhysics = (player, inputs, frameCount) => {
     // --- 1. Determine Desired Ground State (Slide vs Run vs Idle) ---
 
     // Check Slide Timer
@@ -45,15 +48,24 @@ export const updatePlayerPhysics = (player, inputs) => {
     const stepMoveX = inputs.right ? PHYSICS_CONSTANTS.RUN_SPEED / SUB_STEPS : 0;
     const stepJumpForce = (inputs.jump && player.isGrounded && !wantSlide) ? PHYSICS_CONSTANTS.JUMP_FORCE : 0;
 
+    // Track previous grounded state for landing effects
+    const wasGrounded = player.isGrounded;
+
     // Apply jump initial velocity once
     if (stepJumpForce !== 0) {
         player.vy = stepJumpForce;
         player.isGrounded = false;
+        createDustPuff(player.x + player.w / 2, PHYSICS_CONSTANTS.GROUND_Y, 3); // Jump puff
     }
 
     for (let s = 0; s < SUB_STEPS; s++) {
         // Horizontal Movement
         player.x += stepMoveX;
+
+        // Spawn small running dust
+        if (player.isGrounded && inputs.right && frameCount % 12 === 0) {
+            createRunDust(player.x, PHYSICS_CONSTANTS.GROUND_Y);
+        }
 
         // Gravity
         player.y += player.vy / SUB_STEPS;
@@ -69,6 +81,12 @@ export const updatePlayerPhysics = (player, inputs) => {
             player.y = groundY;
             player.vy = 0;
             player.isGrounded = true;
+
+            // Landing Juice!
+            if (!wasGrounded) {
+                triggerShake(4, 10);
+                createDustPuff(player.x + player.w / 2, PHYSICS_CONSTANTS.GROUND_Y, 8);
+            }
         } else {
             player.isGrounded = false;
         }
