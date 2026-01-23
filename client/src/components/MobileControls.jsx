@@ -31,7 +31,7 @@ const MobileControls = () => {
     const slideBtn = `${btnBase} w-28 h-28 text-xl rotate-[-1deg] border-[#3b82f6] text-[#3b82f6] hover:bg-[#3b82f6] hover:text-paper`;
 
     return (
-        <div className="w-full h-full flex justify-between items-end px-10 pb-8">
+        <div className="w-full h-full flex justify-between items-end px-10 pb-[max(2rem,env(safe-area-inset-bottom))]">
             <div className="flex items-center">
                 <button
                     className={runBtn}

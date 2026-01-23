@@ -110,8 +110,10 @@ function App() {
             className="min-h-screen w-full flex justify-center items-center text-black overflow-hidden selection:bg-blue-500/30"
             style={{
                 backgroundImage: `url(${pageBg})`,
-                backgroundRepeat: 'repeat',
-                backgroundSize: 'auto'
+                backgroundRepeat: 'no-repeat',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center',
+                backgroundAttachment: 'fixed'
             }}
         >
             {screen === 'home' && (

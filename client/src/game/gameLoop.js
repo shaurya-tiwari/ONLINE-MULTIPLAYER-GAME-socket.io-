@@ -286,9 +286,14 @@ const render = () => {
 
     ctx.save();
 
-    // Scaling Logic (Corrected: Scale THEN Translate)
+    // Scaling Logic (Dual-axis scale based on base height of 600)
     const BASE_HEIGHT = 600;
-    const scaleFactor = Math.max(0.1, canvas.height / BASE_HEIGHT);
+    const BASE_WIDTH = 1000;
+    // Scale based on whichever dimension is more restrictive to avoid content clipping
+    const scaleFactorHeight = canvas.height / BASE_HEIGHT;
+    const scaleFactorWidth = canvas.width / BASE_WIDTH;
+    const scaleFactor = Math.max(0.2, Math.min(scaleFactorHeight, scaleFactorWidth * 1.5)); // Allow some wide stretch
+
     ctx.scale(scaleFactor, scaleFactor);
     ctx.translate(-cameraX, 0);
 
@@ -538,13 +543,15 @@ const renderGameOver = () => {
 };
 
 const renderHUD = () => {
-    // Dynamic responsive scaling based on canvas width
-    const scale = canvas.width <= 400 ? 0.4 : canvas.width < 640 ? 0.65 : canvas.width < 1024 ? 0.85 : 1.0;
+    // Continuous fluid scaling formula (clamp between 0.6 and 1.0)
+    const hudScale = Math.max(0.6, Math.min(1.0, canvas.width / 1200));
+    const scale = hudScale;
 
     const boardW = 200 * scale;
-    // Shifted to the right side with consistent padding
-    const x = canvas.width - boardW - (16 * scale);
-    const y = 16 * scale;
+    // Account for safe areas in HUD positioning (Shifted from right)
+    const padding = 16 * scale;
+    const x = canvas.width - boardW - padding;
+    const y = padding;
 
     const sortedPlayers = Object.values(users).sort((a, b) => b.x - a.x);
     const boardH = (44 * scale) + (sortedPlayers.length * (32 * scale));
@@ -570,9 +577,10 @@ const renderHUD = () => {
     ctx.roundRect(x, y, 4 * scale, boardH, { tl: 4 * scale, bl: 4 * scale });
     ctx.fill();
 
-    // Header Text
+    // Header Text - Min Font Size Clamp
     ctx.fillStyle = '#111';
-    ctx.font = `black ${14 * scale}px "Inter", sans-serif`;
+    const headerFontSize = Math.max(10, 14 * scale);
+    ctx.font = `900 ${headerFontSize}px "Inter", sans-serif`;
     ctx.textAlign = 'left';
     ctx.fillText("STANDINGS", x + (16 * scale), y + (26 * scale));
 
@@ -586,10 +594,11 @@ const renderHUD = () => {
             ctx.fillRect(x + (6 * scale), rowY - (22 * scale), boardW - (12 * scale), 28 * scale);
         }
 
-        // Rank and Name
+        // Rank and Name - Min Font Size Clamp
         ctx.textAlign = 'left';
         ctx.fillStyle = p.id === myId ? '#ef4444' : '#111';
-        ctx.font = `${p.id === myId ? 'bold' : '500'} ${12 * scale}px "Inter", sans-serif`;
+        const nameFontSize = Math.max(9, 12 * scale);
+        ctx.font = `${p.id === myId ? '900' : '700'} ${nameFontSize}px "Inter", sans-serif`;
 
         const rankStr = `${index + 1}.`;
         const nameStr = p.name.length > 10 ? p.name.substring(0, 8) + '..' : p.name;

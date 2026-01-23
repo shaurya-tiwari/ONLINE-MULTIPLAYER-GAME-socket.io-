@@ -81,15 +81,16 @@ const GameScreen = ({ socket, roomCode, playerId, players, gameMap, raceLength }
 
     return (
         <div className="w-full h-full flex flex-col items-center justify-start bg-transparent overflow-hidden relative pt-12 md:justify-center md:pt-0">
-            {/* Main Game Container - Transparent to see paper bg */}
+            {/* Main Game Container - Fixed Aspect Ratio Box */}
             <div className="relative w-full max-w-6xl aspect-video bg-transparent shadow-none overflow-hidden shrink-0 border-2 border-black/50">
                 {/* Canvas Cover (Grass Overlay) - Behind Canvas */}
                 <CanvasCover />
 
                 <canvas ref={canvasRef} className="block w-full h-full object-contain relative z-10" />
 
-                {/* HUD Layer */}
-                <div className="absolute top-4 left-4 pointer-events-none z-20 flex flex-wrap gap-3 items-start">
+                {/* HUD Layer - Using safe area padding */}
+                <div className="absolute left-4 z-20 flex flex-wrap gap-3 items-start pointer-events-none"
+                    style={{ top: 'max(1rem, env(safe-area-inset-top))', left: 'max(1rem, env(safe-area-inset-left))' }}>
                     {/* Room Identity Badge */}
                     <div className="pointer-events-auto flex flex-col items-center transform -rotate-1">
                         <span className="bg-ink text-paper text-[10px] sm:text-xs font-black px-2 py-0.5 rounded-t-sm uppercase tracking-widest leading-none">

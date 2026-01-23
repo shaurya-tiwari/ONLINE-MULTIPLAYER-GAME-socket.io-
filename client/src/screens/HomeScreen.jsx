@@ -7,7 +7,7 @@ const HomeScreen = ({ onHost, onJoin }) => {
     const [raceLength, setRaceLength] = useState('500m');
 
     const titleStyle = "text-5xl md:text-7xl lg:text-8xl font-black mb-8 md:mb-12 tracking-tighter animate-float text-black drop-shadow-lg leading-none";
-    const cardStyle = "card-paper rough-edge w-full max-w-md flex flex-col gap-4 md:gap-6 items-center animate-fade-in py-6 md:py-8";
+    const cardStyle = "card-paper rough-edge w-full max-w-md flex flex-col gap-4 md:gap-6 items-center animate-fade-in py-6 md:py-8 max-h-[90vh] overflow-y-auto";
     const inputStyle = "w-full bg-transparent border-b-4 border-ink px-4 py-3 md:py-4 text-xl md:text-2xl font-black placeholder-gray-400 outline-none focus:border-marker transition-all uppercase text-center";
     const primaryButtonStyle = "btn-ink transition-all active:scale-95 py-3 md:py-4 text-xl md:text-2xl";
     const secondaryButtonStyle = "text-[10px] md:text-xs font-black border-b-2 border-transparent hover:border-ink transition-all mt-4 md:mt-6 uppercase tracking-widest opacity-60 hover:opacity-100 cursor-pointer";
