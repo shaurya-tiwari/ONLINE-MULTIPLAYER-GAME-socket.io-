@@ -14,4 +14,4 @@ const CanvasCover = () => {
     );
 };
 
-export default CanvasCover;
+export default React.memo(CanvasCover);

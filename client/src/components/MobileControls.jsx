@@ -67,5 +67,5 @@ const MobileControls = () => {
     );
 };
 
-export default MobileControls;
+export default React.memo(MobileControls);
 

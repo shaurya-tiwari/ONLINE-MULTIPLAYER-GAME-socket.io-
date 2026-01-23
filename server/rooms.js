@@ -1,4 +1,5 @@
 const rooms = {};
+const playerToRoom = new Map(); // O(1) lookup for cleanup
 
 const generateRoomCode = () => {
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -24,6 +25,7 @@ const createRoom = (hostId, hostName, raceLength = '500m') => {
         },
         gameState: 'lobby' // lobby, racing
     };
+    playerToRoom.set(hostId, code);
     return code;
 };
 
@@ -36,35 +38,40 @@ const joinRoom = (code, playerId, playerName) => {
         name: playerName,
         isHost: false
     };
+    playerToRoom.set(playerId, code);
     return { room: rooms[code] };
 };
 
 const getRoom = (code) => rooms[code];
 
 const leaveRoom = (playerId) => {
-    let roomCodeToUpdate = null;
-    let roomWasDeleted = false;
-
-    for (const code in rooms) {
-        if (rooms[code].players[playerId]) {
-            const room = rooms[code];
-            delete room.players[playerId];
-            roomCodeToUpdate = code;
-
-            // Log for debugging
-            console.log(`Player ${playerId} left room ${code}`);
-
-            // If Host leaves, we close the room for simplicity in this version
-            // (Or migrate host if you want more complexity)
-            if (room.host === playerId || Object.keys(room.players).length === 0) {
-                console.log(`Closing room ${code} because host/last player left`);
-                delete rooms[code];
-                roomWasDeleted = true;
-                roomCodeToUpdate = null;
-            }
-            break;
-        }
+    const code = playerToRoom.get(playerId);
+    if (!code || !rooms[code]) {
+        playerToRoom.delete(playerId);
+        return { code: null, deleted: false };
     }
+
+    const room = rooms[code];
+    delete room.players[playerId];
+    playerToRoom.delete(playerId);
+
+    console.log(`Player ${playerId} left room ${code}`);
+
+    let roomWasDeleted = false;
+    let roomCodeToUpdate = code;
+
+    // If Host leaves, we close the room
+    if (room.host === playerId || Object.keys(room.players).length === 0) {
+        console.log(`Closing room ${code} because host/last player left`);
+
+        // Clean up playerToRoom for ALL players in this room
+        Object.keys(room.players).forEach(pId => playerToRoom.delete(pId));
+
+        delete rooms[code];
+        roomWasDeleted = true;
+        roomCodeToUpdate = null;
+    }
+
     return { code: roomCodeToUpdate, deleted: roomWasDeleted };
 };
 

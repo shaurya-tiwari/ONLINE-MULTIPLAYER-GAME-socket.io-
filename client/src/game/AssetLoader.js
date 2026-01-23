@@ -26,16 +26,17 @@ const runFrames = getModules(runImagesGlob);
 const slideFrames = getModules(slideImagesGlob);
 
 // Helper to pre-load images
-const loadedImages = {
-    trees: [],
-    ground: [],
-    air: [],
-    jump: [],
-    run: [],
-    slide: []
-};
+const loadedImages = new Map([
+    ['tree', []],
+    ['ground', []],
+    ['air', []],
+    ['jump', []],
+    ['run', []],
+    ['slide', []]
+]);
 
-const preload = (srcArray, targetArray) => {
+const preload = (srcArray, type) => {
+    const targetArray = loadedImages.get(type);
     srcArray.forEach(src => {
         const img = new Image();
         img.src = src;
@@ -43,23 +44,19 @@ const preload = (srcArray, targetArray) => {
     });
 };
 
-preload(trees, loadedImages.trees);
-preload(groundObs, loadedImages.ground);
-preload(airObs, loadedImages.air);
-preload(jumpFrames, loadedImages.jump);
-preload(runFrames, loadedImages.run);
-preload(slideFrames, loadedImages.slide);
+preload(trees, 'tree');
+preload(groundObs, 'ground');
+preload(airObs, 'air');
+preload(jumpFrames, 'jump');
+preload(runFrames, 'run');
+preload(slideFrames, 'slide');
 
+/**
+ * O(1) Asset Retrieval (Optimized for hot render loop)
+ */
 export const getAsset = (type, index) => {
-    let arr = [];
-    if (type === 'tree') arr = loadedImages.trees;
-    else if (type === 'ground') arr = loadedImages.ground;
-    else if (type === 'air') arr = loadedImages.air;
-    else if (type === 'jump') arr = loadedImages.jump;
-    else if (type === 'run') arr = loadedImages.run;
-    else if (type === 'slide') arr = loadedImages.slide;
-
-    if (arr.length === 0) return null;
+    const arr = loadedImages.get(type);
+    if (!arr || arr.length === 0) return null;
 
     // Use modulo to cycle through available images deterministically
     return arr[index % arr.length];

@@ -40,6 +40,40 @@ let lastEmitTime = 0;
 const EMIT_RATE = 50; // 20 TPS (Emit every 50ms)
 const remotePlayers = {}; // { id: { current: {x,y...}, target: {x,y...}, lastUpdate: timestamp } }
 
+// --- REUSABLE PAYLOAD (Fixes GC Churn) ---
+const emitPayload = {
+    code: '',
+    playerState: {
+        id: '', name: '', x: 0, y: 0, w: 0, h: 0, state: '', finished: false
+    }
+};
+
+// --- DELTA TIME TRACKING ---
+let lastFrameTime = performance.now();
+let isTabActive = true;
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+// --- NAME TAG COLOR PALETTE ---
+const NAME_TAG_COLORS = [
+    '#ef4444', // Red
+    '#3b82f6', // Blue
+    '#10b981', // Green
+    '#f59e0b', // Amber
+    '#8b5cf6', // Violet
+    '#ec4899', // Pink
+    '#06b6d4', // Cyan
+    '#f97316'  // Orange
+];
+
+const getPlayerColor = (id) => {
+    if (!id) return NAME_TAG_COLORS[0];
+    let hash = 0;
+    for (let i = 0; i < id.length; i++) {
+        hash = id.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return NAME_TAG_COLORS[Math.abs(hash) % NAME_TAG_COLORS.length];
+};
+
 const handleKeyDown = (e) => {
     switch (e.code) {
         case 'ArrowRight':
@@ -126,68 +160,83 @@ export const startGameLoop = (canvasElem, socket, playerId, players, gameMap, ro
 
     cameraX = 0;
 
-    // Use Pointer Events for unified touch/mouse support
+    // Restore Global Listeners (Crucial for movement)
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
 
-
-    // Click handler for Restart Button
-    const handleClick = (e) => {
+    // Unified Input Handler (Fixes Mobile Latency & Duplicate Listeners)
+    const handlePointerDown = (e) => {
         if (!users[myId] || !users[myId].finished) return;
-
         const rect = canvas.getBoundingClientRect();
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
-
         const cx = canvas.width / 2;
         const cy = canvas.height / 2;
 
-        // Button Bounds (defined in renderGameOver)
-        // x: cx - 120, y: cy + 20, w: 240, h: 60
         if (x >= cx - 120 && x <= cx + 120 && y >= cy + 20 && y <= cy + 80) {
-            // Clicked Restart
             if (socketRef && roomCodeRef) {
                 socketRef.emit('restart_game', { code: roomCodeRef });
             }
         }
     };
-    canvas.addEventListener('click', handleClick);
-    // Also touch for mobile
-    canvas.addEventListener('touchstart', (e) => {
-        // Simple touch handler mapping to click logic
-        if (e.touches.length > 0) {
-            const touch = e.touches[0];
-            handleClick({ clientX: touch.clientX, clientY: touch.clientY });
-        }
-    });
 
-    const loop = () => {
-        update();
-        render();
+    // Save references for cleanup (Fixes Memory Leaks)
+    canvas.handlePointerDown = handlePointerDown;
+    canvas.addEventListener('pointerdown', handlePointerDown);
+
+    // Visibility Listener (Fixes Network Flooding on Inactive Tabs)
+    const handleVisibilityChange = () => {
+        isTabActive = !document.hidden;
+        if (isTabActive) {
+            lastFrameTime = performance.now();
+        }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.handleVisibilityChange = handleVisibilityChange;
+
+    const loop = (currentTime) => {
+        if (!isTabActive) {
+            animationFrameId = requestAnimationFrame(loop);
+            return;
+        }
+
+        const dt = (currentTime - lastFrameTime) / 1000;
+        lastFrameTime = currentTime;
+
+        update(dt);
+        render(dt);
         frameCount++;
         animationFrameId = requestAnimationFrame(loop);
     };
 
-    loop();
+    lastFrameTime = performance.now();
+    loop(lastFrameTime);
 };
 
 export const stopGameLoop = () => {
     cancelAnimationFrame(animationFrameId);
+
+    // Proper Listener Cleanup (Critical Memory Fix)
     window.removeEventListener('keydown', handleKeyDown);
     window.removeEventListener('keyup', handleKeyUp);
+
+    if (canvas) {
+        canvas.removeEventListener('pointerdown', canvas.handlePointerDown);
+    }
+    document.removeEventListener('visibilitychange', document.handleVisibilityChange);
+
     if (socketRef) {
         socketRef.off('player_updated');
     }
 };
 
-const update = () => {
+const update = (dt) => {
     if (!users[myId]) return;
 
     const player = users[myId];
 
     // Update Countdown
     updateCountdown(() => {
-        // Callback when "GO!" hits
         triggerShake(15, 20);
         createDustPuff(player.x + player.w / 2, 500, 15);
     });
@@ -196,15 +245,15 @@ const update = () => {
 
     // Check Finish
     if (player.x >= MAP_LENGTH) {
-        player.state = 'idle'; // Stop moving
+        player.state = 'idle';
         if (!player.finished) {
             player.finished = true;
-            triggerShake(10, 30); // Win Shake!
+            triggerShake(10, 30);
             if (socketRef && roomCodeRef) {
                 socketRef.emit('player_won', {
                     code: roomCodeRef,
                     name: player.name,
-                    x: player.x // Pass x for validation
+                    x: player.x
                 });
             }
         }
@@ -216,22 +265,21 @@ const update = () => {
         handleCollisions(player, mapData.obstacles);
     }
 
+    // --- REUSE OBJECT FOR EMIT (Prevents GC Stutter) ---
     if (socketRef && roomCodeRef) {
         const now = Date.now();
         if (now - lastEmitTime > EMIT_RATE) {
-            socketRef.emit('player_update', {
-                code: roomCodeRef,
-                playerState: {
-                    id: player.id,
-                    name: player.name,
-                    x: player.x,
-                    y: player.y,
-                    w: player.w,
-                    h: player.h,
-                    state: player.state,
-                    finished: player.finished
-                }
-            });
+            emitPayload.code = roomCodeRef;
+            emitPayload.playerState.id = player.id;
+            emitPayload.playerState.name = player.name;
+            emitPayload.playerState.x = player.x;
+            emitPayload.playerState.y = player.y;
+            emitPayload.playerState.w = player.w;
+            emitPayload.playerState.h = player.h;
+            emitPayload.playerState.state = player.state;
+            emitPayload.playerState.finished = player.finished;
+
+            socketRef.emit('player_update', emitPayload);
             lastEmitTime = now;
         }
     }
@@ -240,9 +288,8 @@ const update = () => {
     if (cameraX < 0) cameraX = 0;
 };
 
-export const updateRemotePlayers = () => {
+export const updateRemotePlayers = (dt) => {
     const now = Date.now();
-    const INTERPOLATION_DELAY = 100; // 100ms lag for smoothing
 
     Object.keys(remotePlayers).forEach(id => {
         if (id === myId) return;
@@ -250,14 +297,12 @@ export const updateRemotePlayers = () => {
         const user = users[id];
         if (!user) return;
 
-        // Simple Linear Interpolation (Lerp)
-        const t = Math.min(1, (now - data.lastUpdate) / INTERPOLATION_DELAY);
+        // --- DELTA-TIME INTERPOLATION (Framerate Independent Sync) ---
+        // Using exponential smoothing for more reliable catch-up than frame-lerp
+        const lerpFactor = 12; // Smoothing speed
+        user.x += (data.target.x - user.x) * (1 - Math.exp(-lerpFactor * dt));
+        user.y += (data.target.y - user.y) * (1 - Math.exp(-lerpFactor * dt));
 
-        // We move the current position towards the target
-        user.x = user.x + (data.target.x - user.x) * 0.2; // Smooth catch-up
-        user.y = user.y + (data.target.y - user.y) * 0.2;
-
-        // Sync discrete states immediately if they change
         user.state = data.target.state;
         user.finished = data.target.finished;
     });
@@ -266,7 +311,7 @@ export const updateRemotePlayers = () => {
 
 // Redundant local particle system removed - moved to visualEffects.js
 
-const render = () => {
+const render = (dt) => {
     if (!ctx || !canvas) return;
 
     // Juice Features Update
@@ -276,7 +321,7 @@ const render = () => {
     const { currentZoom } = updateVisualEffects(me?.vx || 0, sprinting);
     const shake = getShakeOffset();
 
-    updateRemotePlayers(); // Update remote smoothed positions
+    updateRemotePlayers(dt); // Pass DT for smoothing
 
     // 1. Sky & Background
     ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear
@@ -303,16 +348,20 @@ const render = () => {
     // 2. Ground
     const groundY = 500;
 
-    // Ground Line with Shadow
-    ctx.shadowColor = 'rgba(0,0,0,0.1)';
-    ctx.shadowBlur = 10;
-    ctx.strokeStyle = '#222'; // Darker, cleaner ground
+    // --- CONDITIONAL SHADOWS (Fixes Mobile Latency) ---
+    if (!isMobile) {
+        ctx.shadowColor = 'rgba(0,0,0,0.1)';
+        ctx.shadowBlur = 10;
+    }
+
+    ctx.strokeStyle = '#222';
     ctx.lineWidth = 4;
     ctx.beginPath();
     ctx.moveTo(0, groundY);
     ctx.lineTo(MAP_LENGTH + 2000, groundY);
     ctx.stroke();
-    ctx.shadowBlur = 0; // Reset
+
+    if (!isMobile) ctx.shadowBlur = 0;
 
     // Subtle Ground Details (Less scratchy)
     ctx.strokeStyle = '#e0e0e0';
@@ -356,52 +405,57 @@ const render = () => {
     ctx.fillText("FINISH", MAP_LENGTH + 20, groundY - 150);
 
 
+    // --- OPTIMIZED CULLING (Binary Search for O(log N) skip) ---
+    // Since map data is generated in sorted X order, we can skip hidden objects!
+    const findStartIndex = (arr, scrollX) => {
+        let low = 0, high = arr.length - 1;
+        let result = 0;
+        while (low <= high) {
+            let mid = Math.floor((low + high) / 2);
+            if (arr[mid].x + (arr[mid].w || 150) * 2 < scrollX) {
+                result = mid + 1;
+                low = mid + 1;
+            } else {
+                high = mid - 1;
+            }
+        }
+        return result;
+    };
+
     // 3. Map Objects
     if (mapData) {
+        const viewWidth = canvas.width / (baseScale * currentZoom);
+
         // Trees
-        mapData.trees.forEach((tree, index) => {
-            // Culling
-            if (tree.x + (tree.w * 2) < cameraX || tree.x > cameraX + (canvas.width / (baseScale * currentZoom))) return;
+        const treeStart = findStartIndex(mapData.trees, cameraX);
+        for (let i = treeStart; i < mapData.trees.length; i++) {
+            const tree = mapData.trees[i];
+            if (tree.x > cameraX + viewWidth) break; // End search early!
 
-            const img = getAsset('tree', index);
-
-            // Fix Tree Alignment: Align bottom of tree to groundY
-            // We are scaling trees up (user request), so we calculate visual dimensions first.
-            const drawW = tree.w * 2;   // Bigger width
-            const drawH = tree.h * 1.5; // Bigger height
+            const img = getAsset('tree', i);
+            const drawW = tree.w * 2;
+            const drawH = tree.h * 1.5;
             const drawX = tree.x;
-            const drawY = groundY - drawH; // Force bottom alignment
+            const drawY = groundY - drawH;
 
             if (img) {
-                // Soft shadow for tree
                 ctx.fillStyle = 'rgba(0,0,0,0.1)';
                 ctx.beginPath();
                 ctx.ellipse(drawX + drawW / 2, groundY, drawW / 3, 8, 0, 0, Math.PI * 2);
                 ctx.fill();
-
                 ctx.drawImage(img, drawX, drawY, drawW, drawH);
-            } else {
-                // Fallback Tree
-                ctx.fillStyle = '#4caf50';
-                ctx.beginPath();
-                ctx.moveTo(drawX + drawW / 2, drawY);
-                ctx.lineTo(drawX, drawY + drawH);
-                ctx.lineTo(drawX + drawW, drawY + drawH);
-                ctx.fill();
             }
-        });
+        }
 
         // Obstacles
-        mapData.obstacles.forEach((obs, index) => {
-            if (obs.x + obs.w < cameraX || obs.x > cameraX + (canvas.width / (baseScale * currentZoom))) return;
+        const obsStart = findStartIndex(mapData.obstacles, cameraX);
+        for (let i = obsStart; i < mapData.obstacles.length; i++) {
+            const obs = mapData.obstacles[i];
+            if (obs.x > cameraX + viewWidth) break; // End search early!
 
-            const img = getAsset(obs.type, index);
-            // Obstacles are already large from server update (120x120), render as is or slight visual adjustment
+            const img = getAsset(obs.type, i);
             const drawW = obs.w;
             const drawH = obs.h;
-            // Align Y? Server sends logical Y.
-            // If Air, Y is calculated. If Ground, Y is calculated. 
-            // Just trust server Y for obstacles, but maybe add shadow.
 
             if (img) {
                 ctx.drawImage(img, obs.x, obs.y, drawW, drawH);
@@ -415,14 +469,11 @@ const render = () => {
                 ctx.stroke();
             }
 
-            // Shadow for obstacles
             ctx.fillStyle = 'rgba(0,0,0,0.15)';
             ctx.beginPath();
-            // Shadow on ground for Air objects too? Yes, accurately projected below
-            const shadowY = groundY;
-            ctx.ellipse(obs.x + drawW / 2, shadowY, drawW / 2.2, 8, 0, 0, Math.PI * 2);
+            ctx.ellipse(obs.x + drawW / 2, groundY, drawW / 2.2, 8, 0, 0, Math.PI * 2);
             ctx.fill();
-        });
+        }
     }
 
     // 4. Players
@@ -441,28 +492,34 @@ const render = () => {
         const color = '#000';
         drawStickman(ctx, player.x, player.y, player.state, frameCount, color);
 
-        // Name Tag (Clean Badge Style)
+        // Name Tag (Clean Badge Style with Unique Colors)
         ctx.font = 'bold 14px "Inter", "Segoe UI", sans-serif';
         const name = player.name || "Player";
         const textMetrics = ctx.measureText(name);
         const textWidth = textMetrics.width;
-        const padding = 8;
+        const padding = 10; // Slightly more padding
         const badgeW = textWidth + (padding * 2);
-        const badgeH = 24;
+        const badgeH = 26;
         const badgeX = player.x + (player.w / 2) - (badgeW / 2);
-        const badgeY = player.y - 40;
+        const badgeY = player.y - 45; // Lifted slightly higher
 
-        // Badge Background
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.6)'; // Semi-transparent black
+        // Badge Background (Dynamic Color)
+        const badgeColor = getPlayerColor(player.id);
+        ctx.fillStyle = badgeColor;
         ctx.beginPath();
-        ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 12); // Round pills
+        ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 13); // Round pills
         ctx.fill();
+
+        // Subtle Drop Shadow for Badge
+        ctx.strokeStyle = 'rgba(0,0,0,0.1)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
 
         // Badge Text
         ctx.fillStyle = '#fff';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(name, badgeX + badgeW / 2, badgeY + badgeH / 2 + 1); // +1 visual center correction
+        ctx.fillText(name.toUpperCase(), badgeX + badgeW / 2, badgeY + badgeH / 2 + 1);
     });
 
     ctx.restore();

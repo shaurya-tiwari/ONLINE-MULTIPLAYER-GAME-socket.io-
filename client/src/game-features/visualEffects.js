@@ -1,88 +1,116 @@
 /**
  * Visual Effects: Dust and Speed Lines
- * Adds polish particles and motion effects
+ * Adds polish particles and motion effects with Object Pooling for Performance
  */
 
-let particles = [];
-let speedLines = [];
+// --- 1. Object Pooling System ---
+const MAX_PARTICLES = 100;
+const MAX_SPEED_LINES = 30;
+
+// Pre-allocate pools to prevent GC churn (Crirical for stability)
+const particlePool = Array.from({ length: MAX_PARTICLES }, () => ({
+    active: false,
+    x: 0, y: 0, vx: 0, vy: 0,
+    life: 0, size: 0, decay: 0
+}));
+
+const speedLinePool = Array.from({ length: MAX_SPEED_LINES }, () => ({
+    active: false,
+    x: 0, y: 0, len: 0, opacity: 0
+}));
+
 let targetZoom = 1.0;
 let currentZoom = 1.0;
 
 /**
- * Create a dust puff effect
- * @param {number} x - World X pos
- * @param {number} y - World Y pos (ground)
- * @param {number} count - Number of particles
+ * Get an inactive particle from the pool
+ */
+const getParticle = () => {
+    return particlePool.find(p => !p.active);
+};
+
+/**
+ * Get an inactive speed line from the pool
+ */
+const getSpeedLine = () => {
+    return speedLinePool.find(l => !l.active);
+};
+
+/**
+ * Create a dust puff effect (Uses Pooling)
  */
 export const createDustPuff = (x, y, count = 5) => {
-    for (let i = 0; i < count; i++) {
-        particles.push({
-            x,
-            y,
-            vx: (Math.random() - 0.5) * 4 - 2,
-            vy: -Math.random() * 2,
-            life: 1.0,
-            size: Math.random() * 6 + 2,
-            decay: 0.02 + Math.random() * 0.02
-        });
+    let created = 0;
+    for (let i = 0; i < particlePool.length && created < count; i++) {
+        const p = particlePool[i];
+        if (!p.active) {
+            p.active = true;
+            p.x = x;
+            p.y = y;
+            p.vx = (Math.random() - 0.5) * 4 - 2;
+            p.vy = -Math.random() * 2;
+            p.life = 1.0;
+            p.size = Math.random() * 6 + 2;
+            p.decay = 0.02 + Math.random() * 0.02;
+            created++;
+        }
     }
 };
 
 /**
- * Create a specialized "Run Dust" particle (smaller, faster)
+ * Create a specialized "Run Dust" particle (Uses Pooling)
  */
 export const createRunDust = (x, y) => {
-    particles.push({
-        x: x + (Math.random() - 0.5) * 20,
-        y: y,
-        vx: -3 - Math.random() * 2,
-        vy: -Math.random() * 1,
-        life: 0.6,
-        size: Math.random() * 4 + 1,
-        decay: 0.04
-    });
+    const p = getParticle();
+    if (p) {
+        p.active = true;
+        p.x = x + (Math.random() - 0.5) * 20;
+        p.y = y;
+        p.vx = -3 - Math.random() * 2;
+        p.vy = -Math.random() * 1;
+        p.life = 0.6;
+        p.size = Math.random() * 4 + 1;
+        p.decay = 0.04;
+    }
 };
 
 /**
- * Update logic for speed lines and particles
+ * Update logic for effects (No new allocations)
  */
 export const updateVisualEffects = (playerSpeed, isSprinting) => {
     // 1. Update Particles
-    for (let i = particles.length - 1; i >= 0; i--) {
-        const p = particles[i];
+    for (const p of particlePool) {
+        if (!p.active) continue;
+
         p.x += p.vx;
         p.y += p.vy;
         p.life -= p.decay;
-        if (p.life <= 0) particles.splice(i, 1);
+        if (p.life <= 0) p.active = false;
     }
 
-    // 2. Clear/Update Speed Lines
-    speedLines = [];
+    // 2. Speed Lines Removed (User Request)
+    speedLinePool.forEach(l => l.active = false);
+
+    /* 
     if (isSprinting && playerSpeed > 2) {
-        const lineCount = isSprinting ? 25 : 15; // More lines during sprint
-        for (let i = 0; i < lineCount; i++) {
-            speedLines.push({
-                x: Math.random() * 1200, // Screen relative
-                y: Math.random() * 600,
-                len: Math.random() * (isSprinting ? 150 : 100) + 50,
-                opacity: Math.random() * (isSprinting ? 0.4 : 0.2)
-            });
-        }
+        ... removed ...
     }
+    */
 
-    // 3. Update Zoom (Spring interpolation)
-    targetZoom = isSprinting ? 0.85 : 1.0; // Zoom out more slightly when sprinting to see more
+    // 3. Update Zoom
+    targetZoom = isSprinting ? 0.85 : 1.0;
     currentZoom += (targetZoom - currentZoom) * 0.1;
 
     return { currentZoom };
 };
 
 /**
- * Draw effects that exist in World Space (Dust)
+ * Draw World Space Effects (Dust)
  */
 export const drawWorldEffects = (ctx) => {
     ctx.save();
-    particles.forEach(p => {
+    particlePool.forEach(p => {
+        if (!p.active) return;
         ctx.globalAlpha = Math.max(0, p.life);
         ctx.fillStyle = '#bbb';
         ctx.beginPath();
@@ -93,15 +121,14 @@ export const drawWorldEffects = (ctx) => {
 };
 
 /**
- * Draw effects that exist in Screen Space (Speed Lines)
+ * Draw Screen Space Effects (Speed Lines)
  */
 export const drawScreenEffects = (ctx, canvasWidth, canvasHeight) => {
-    if (speedLines.length === 0) return;
-
     ctx.save();
     ctx.strokeStyle = 'rgba(0,0,0,0.1)';
     ctx.lineWidth = 2;
-    speedLines.forEach(line => {
+    speedLinePool.forEach(line => {
+        if (!line.active) return;
         const x = (line.x / 1200) * canvasWidth;
         const y = (line.y / 600) * canvasHeight;
         ctx.beginPath();

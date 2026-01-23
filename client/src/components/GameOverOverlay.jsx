@@ -40,4 +40,4 @@ const GameOverOverlay = ({ isHost, onRestart, winnerName }) => {
     );
 };
 
-export default GameOverOverlay;
+export default React.memo(GameOverOverlay);
