@@ -20,50 +20,47 @@ const MobileControls = () => {
         simulateKey(key, 'keyup');
     };
 
-    // Simplified Modern Button Styles
-    const btnBase = "rounded-full flex items-center justify-center text-white font-bold backdrop-blur-sm transition-all active:scale-95 select-none touch-none shadow-lg";
+    // Sketch themed Button Styles
+    const btnBase = "flex items-center justify-center text-ink font-black transition-all active:scale-90 select-none touch-none shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] border-4 border-ink rough-edge bg-paper hover:bg-ink hover:text-paper";
 
     // Run Button (Large, Left)
-    const runBtn = `${btnBase} w-24 h-24 bg-blue-600/40 border-2 border-blue-400/50 active:bg-blue-600/60`;
+    const runBtn = `${btnBase} w-32 h-32 text-2xl rotate-[-2deg]`;
 
-    // Action Buttons (Right) - Removed bottom margin from jumpBtn
-    const jumpBtn = `${btnBase} w-20 h-20 bg-green-600/40 border-2 border-green-400/50 active:bg-green-600/60`;
-    const slideBtn = `${btnBase} w-20 h-20 bg-red-600/40 border-2 border-red-400/50 active:bg-red-600/60`;
+    // Action Buttons (Right) - Vertical Column
+    const jumpBtn = `${btnBase} w-28 h-28 text-xl rotate-[3deg] border-marker text-marker hover:bg-marker hover:text-paper`;
+    const slideBtn = `${btnBase} w-28 h-28 text-xl rotate-[-1deg] border-[#3b82f6] text-[#3b82f6] hover:bg-[#3b82f6] hover:text-paper`;
 
     return (
-        <div className="w-full h-full flex justify-between items-end px-8 pb-4">
+        <div className="w-full h-full flex justify-between items-end px-10 pb-8">
             <div className="flex items-center">
                 <button
                     className={runBtn}
-                    onTouchStart={handleTouchStart('ArrowRight')}
-                    onTouchEnd={handleTouchEnd('ArrowRight')}
-                    onMouseDown={handleTouchStart('ArrowRight')}
-                    onMouseUp={handleTouchEnd('ArrowRight')}
+                    onPointerDown={handleTouchStart('ArrowRight')}
+                    onPointerUp={handleTouchEnd('ArrowRight')}
+                    onPointerLeave={handleTouchEnd('ArrowRight')}
                 >
-                    <span className="tracking-wider">RUN</span>
+                    <span className="tracking-tighter">RUN</span>
                 </button>
             </div>
 
-            {/* RIGHT: JUMP & SLIDE (Side by Side) */}
-            <div className="flex items-end gap-4">
+            {/* RIGHT: JUMP (Top) & SLIDE (Bottom) - Vertical Column */}
+            <div className="flex flex-col items-center gap-6">
                 <button
-                    className={slideBtn}
-                    onTouchStart={handleTouchStart('ArrowDown')}
-                    onTouchEnd={handleTouchEnd('ArrowDown')}
-                    onMouseDown={handleTouchStart('ArrowDown')}
-                    onMouseUp={handleTouchEnd('ArrowDown')}
+                    className={jumpBtn}
+                    onPointerDown={handleTouchStart('Space')}
+                    onPointerUp={handleTouchEnd('Space')}
+                    onPointerLeave={handleTouchEnd('Space')}
                 >
-                    SLIDE
+                    JUMP
                 </button>
 
                 <button
-                    className={jumpBtn}
-                    onTouchStart={handleTouchStart('Space')}
-                    onTouchEnd={handleTouchEnd('Space')}
-                    onMouseDown={handleTouchStart('Space')}
-                    onMouseUp={handleTouchEnd('Space')}
+                    className={slideBtn}
+                    onPointerDown={handleTouchStart('ArrowDown')}
+                    onPointerUp={handleTouchEnd('ArrowDown')}
+                    onPointerLeave={handleTouchEnd('ArrowDown')}
                 >
-                    JUMP
+                    SLIDE
                 </button>
             </div>
         </div>

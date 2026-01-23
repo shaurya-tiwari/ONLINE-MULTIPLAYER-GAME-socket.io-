@@ -16,11 +16,22 @@ let inputs = {
     jump: false,
     slide: false
 };
+
+export const clearInputs = () => {
+    inputs.right = false;
+    inputs.jump = false;
+    inputs.slide = false;
+};
 let socketRef;
 let roomCodeRef;
 let frameCount = 0;
 let onGameOverCallback;
 let MAP_LENGTH = 5000; // Will be set dynamically
+
+// Production Networking & Optimization
+let lastEmitTime = 0;
+const EMIT_RATE = 50; // 20 TPS (Emit every 50ms)
+const remotePlayers = {}; // { id: { current: {x,y...}, target: {x,y...}, lastUpdate: timestamp } }
 
 const handleKeyDown = (e) => {
     switch (e.code) {
@@ -72,31 +83,43 @@ export const startGameLoop = (canvasElem, socket, playerId, players, gameMap, ro
     MAP_LENGTH = getFinishLinePosition(raceLengthLabel);
 
     // Reset inputs to prevent auto-running if key was held during reset
-    inputs = { right: false, jump: false, slide: false };
+    clearInputs();
 
     users = {};
     Object.values(players).forEach(p => {
         users[p.id] = createPlayerState(p.id, p.name);
+        // Initialize interpolation buffer
+        remotePlayers[p.id] = {
+            current: { ...users[p.id] },
+            target: { ...users[p.id] },
+            lastUpdate: Date.now()
+        };
     });
 
     socket.on('player_updated', (remotePlayer) => {
         if (remotePlayer.id !== myId) {
             if (!users[remotePlayer.id]) {
                 users[remotePlayer.id] = createPlayerState(remotePlayer.id, remotePlayer.name);
+                remotePlayers[remotePlayer.id] = {
+                    current: { ...users[remotePlayer.id] },
+                    target: { ...users[remotePlayer.id] },
+                    lastUpdate: Date.now()
+                };
             }
-            users[remotePlayer.id].x = remotePlayer.x;
-            users[remotePlayer.id].y = remotePlayer.y;
-            users[remotePlayer.id].w = remotePlayer.w;
-            users[remotePlayer.id].h = remotePlayer.h;
-            users[remotePlayer.id].state = remotePlayer.state;
-            // Also sync progress/status if we added it
+
+            // Move current to target (or current is where we are now)
+            // Target is the new data
+            remotePlayers[remotePlayer.id].target = { ...remotePlayer };
+            remotePlayers[remotePlayer.id].lastUpdate = Date.now();
         }
     });
 
     cameraX = 0;
 
+    // Use Pointer Events for unified touch/mouse support
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
+
 
     // Click handler for Restart Button
     const handleClick = (e) => {
@@ -160,7 +183,8 @@ const update = () => {
             if (socketRef && roomCodeRef) {
                 socketRef.emit('player_won', {
                     code: roomCodeRef,
-                    name: player.name
+                    name: player.name,
+                    x: player.x // Pass x for validation
                 });
             }
         }
@@ -173,24 +197,52 @@ const update = () => {
     }
 
     if (socketRef && roomCodeRef) {
-        socketRef.emit('player_update', {
-            code: roomCodeRef,
-            playerState: {
-                id: player.id,
-                name: player.name,
-                x: player.x,
-                y: player.y,
-                w: player.w,
-                h: player.h,
-                state: player.state,
-                finished: player.finished
-            }
-        });
+        const now = Date.now();
+        if (now - lastEmitTime > EMIT_RATE) {
+            socketRef.emit('player_update', {
+                code: roomCodeRef,
+                playerState: {
+                    id: player.id,
+                    name: player.name,
+                    x: player.x,
+                    y: player.y,
+                    w: player.w,
+                    h: player.h,
+                    state: player.state,
+                    finished: player.finished
+                }
+            });
+            lastEmitTime = now;
+        }
     }
 
     cameraX = player.x - 100;
     if (cameraX < 0) cameraX = 0;
 };
+
+export const updateRemotePlayers = () => {
+    const now = Date.now();
+    const INTERPOLATION_DELAY = 100; // 100ms lag for smoothing
+
+    Object.keys(remotePlayers).forEach(id => {
+        if (id === myId) return;
+        const data = remotePlayers[id];
+        const user = users[id];
+        if (!user) return;
+
+        // Simple Linear Interpolation (Lerp)
+        const t = Math.min(1, (now - data.lastUpdate) / INTERPOLATION_DELAY);
+
+        // We move the current position towards the target
+        user.x = user.x + (data.target.x - user.x) * 0.2; // Smooth catch-up
+        user.y = user.y + (data.target.y - user.y) * 0.2;
+
+        // Sync discrete states immediately if they change
+        user.state = data.target.state;
+        user.finished = data.target.finished;
+    });
+};
+
 
 // Particle System State
 let particles = [];
@@ -209,17 +261,22 @@ const createDust = (x, y) => {
 };
 
 const updateParticles = () => {
-    particles = particles.filter(p => p.life > 0);
-    particles.forEach(p => {
+    // In-place update to avoid GC churn from .filter()
+    for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
         p.x += p.vx;
         p.y += p.vy;
         p.life -= 0.02;
-    });
+        if (p.life <= 0) {
+            particles.splice(i, 1);
+        }
+    }
 };
 
 const render = () => {
     if (!ctx || !canvas) return;
 
+    updateRemotePlayers(); // Update remote smoothed positions
     updateParticles();
 
     // 1. Sky & Background

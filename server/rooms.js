@@ -41,9 +41,37 @@ const joinRoom = (code, playerId, playerName) => {
 
 const getRoom = (code) => rooms[code];
 
+const leaveRoom = (playerId) => {
+    let roomCodeToUpdate = null;
+    let roomWasDeleted = false;
+
+    for (const code in rooms) {
+        if (rooms[code].players[playerId]) {
+            const room = rooms[code];
+            delete room.players[playerId];
+            roomCodeToUpdate = code;
+
+            // Log for debugging
+            console.log(`Player ${playerId} left room ${code}`);
+
+            // If Host leaves, we close the room for simplicity in this version
+            // (Or migrate host if you want more complexity)
+            if (room.host === playerId || Object.keys(room.players).length === 0) {
+                console.log(`Closing room ${code} because host/last player left`);
+                delete rooms[code];
+                roomWasDeleted = true;
+                roomCodeToUpdate = null;
+            }
+            break;
+        }
+    }
+    return { code: roomCodeToUpdate, deleted: roomWasDeleted };
+};
+
 module.exports = {
     rooms,
     createRoom,
     joinRoom,
-    getRoom
+    getRoom,
+    leaveRoom
 };

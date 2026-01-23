@@ -1,4 +1,4 @@
-const { createRoom, joinRoom, getRoom } = require('./rooms');
+const { createRoom, joinRoom, getRoom, leaveRoom } = require('./rooms');
 const { generateTrack } = require('./mapGenerator');
 const { validateRaceLength, getFinishLinePosition } = require('./raceLength');
 
@@ -57,12 +57,26 @@ module.exports = (io) => {
         });
 
         socket.on('player_update', ({ code, playerState }) => {
+            // Basic rate limiting: Only allow ~30 updates per second per socket
+            const now = Date.now();
+            if (socket.lastUpdate && now - socket.lastUpdate < 30) return;
+            socket.lastUpdate = now;
+
             // Broadcast to everyone else in the room
-            // socket.to(code) excludes the sender
             socket.to(code).emit('player_updated', playerState);
         });
 
-        socket.on('player_won', ({ code, name }) => {
+        socket.on('player_won', ({ code, name, x }) => {
+            const room = getRoom(code);
+            if (!room) return;
+
+            // Anti-Cheat: Validate finish line position
+            const requiredX = getFinishLinePosition(room.raceLength);
+            if (x < requiredX - 50) {
+                console.warn(`Suspicious player_won from ${name}: x=${x} vs required=${requiredX}`);
+                return;
+            }
+
             // Broadcast to EVERYONE in the room (including sender) that game is over
             io.to(code).emit('game_over', { winner: name });
             console.log(`Player ${name} won in room ${code}`);
@@ -71,11 +85,6 @@ module.exports = (io) => {
         socket.on('restart_game', ({ code }) => {
             const room = getRoom(code);
             if (room) {
-                // Reset Players
-                Object.values(room.players).forEach(p => {
-                    // We don't track physics on server, so just notify clients to reset
-                });
-
                 // Generate New Map
                 const pixelLength = getFinishLinePosition(room.raceLength);
                 const gameMap = generateTrack(pixelLength);
@@ -88,9 +97,30 @@ module.exports = (io) => {
             }
         });
 
+        socket.on('disconnecting', () => {
+            // Check all rooms the socket is in
+            const rooms = Array.from(socket.rooms);
+            rooms.forEach(code => {
+                if (code !== socket.id) {
+                    const room = getRoom(code);
+                    if (room) {
+                        const result = leaveRoom(socket.id);
+                        if (result.code) {
+                            io.to(result.code).emit('update_room', {
+                                players: room.players,
+                                code: result.code,
+                                raceLength: room.raceLength
+                            });
+                        }
+                    }
+                }
+            });
+        });
+
         socket.on('disconnect', () => {
             console.log(`User Disconnected: ${socket.id}`);
-            // Todo: Handle cleanup if needed
+            // Backup cleanup in case disconnecting missed something
+            leaveRoom(socket.id);
         });
     });
 };
