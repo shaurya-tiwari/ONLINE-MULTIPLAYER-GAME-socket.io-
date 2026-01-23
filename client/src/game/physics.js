@@ -1,5 +1,6 @@
 import { triggerShake } from '../game-features/cameraShake';
 import { createDustPuff, createRunDust } from '../game-features/visualEffects';
+import { getSpeedMultiplier } from '../game-features/playerspeedup';
 
 export const PHYSICS_CONSTANTS = {
     GRAVITY: 0.8,
@@ -23,7 +24,7 @@ export const createPlayerState = (id, name, x = 100) => ({
     isGrounded: true
 });
 
-export const updatePlayerPhysics = (player, inputs, frameCount) => {
+export const updatePlayerPhysics = (player, inputs, frameCount, raceLength = 10000) => {
     // --- 1. Determine Desired Ground State (Slide vs Run vs Idle) ---
 
     // Check Slide Timer
@@ -42,10 +43,15 @@ export const updatePlayerPhysics = (player, inputs, frameCount) => {
         player.slideStartTime = 0;
     }
 
-    // --- 2. Physics Sub-stepping (Production Stability) ---
+    // --- 2. Calculate Dynamic Speed ---
+    const progress = Math.max(0, Math.min(1, player.x / raceLength));
+    const speedMultiplier = getSpeedMultiplier(progress);
+    const currentRunSpeed = PHYSICS_CONSTANTS.RUN_SPEED * speedMultiplier;
+
+    // --- 3. Physics Sub-stepping (Production Stability) ---
     // We run physics in 2 smaller steps to prevent "tunneling" through obstacles
     const SUB_STEPS = 2;
-    const stepMoveX = inputs.right ? PHYSICS_CONSTANTS.RUN_SPEED / SUB_STEPS : 0;
+    const stepMoveX = inputs.right ? currentRunSpeed / SUB_STEPS : 0;
     const stepJumpForce = (inputs.jump && player.isGrounded && !wantSlide) ? PHYSICS_CONSTANTS.JUMP_FORCE : 0;
 
     // Track previous grounded state for landing effects
@@ -61,6 +67,7 @@ export const updatePlayerPhysics = (player, inputs, frameCount) => {
     for (let s = 0; s < SUB_STEPS; s++) {
         // Horizontal Movement
         player.x += stepMoveX;
+        player.vx = inputs.right ? stepMoveX * SUB_STEPS : 0; // Track actual speed per frame
 
         // Spawn small running dust
         if (player.isGrounded && inputs.right && frameCount % 12 === 0) {

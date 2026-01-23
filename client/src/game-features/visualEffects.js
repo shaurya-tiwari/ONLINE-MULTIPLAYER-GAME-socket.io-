@@ -59,18 +59,19 @@ export const updateVisualEffects = (playerSpeed, isSprinting) => {
     // 2. Clear/Update Speed Lines
     speedLines = [];
     if (isSprinting && playerSpeed > 2) {
-        for (let i = 0; i < 15; i++) {
+        const lineCount = isSprinting ? 25 : 15; // More lines during sprint
+        for (let i = 0; i < lineCount; i++) {
             speedLines.push({
                 x: Math.random() * 1200, // Screen relative
                 y: Math.random() * 600,
-                len: Math.random() * 100 + 50,
-                opacity: Math.random() * 0.3
+                len: Math.random() * (isSprinting ? 150 : 100) + 50,
+                opacity: Math.random() * (isSprinting ? 0.4 : 0.2)
             });
         }
     }
 
     // 3. Update Zoom (Spring interpolation)
-    targetZoom = isSprinting ? 0.9 : 1.0; // Zoom out slightly when sprinting to see more
+    targetZoom = isSprinting ? 0.85 : 1.0; // Zoom out more slightly when sprinting to see more
     currentZoom += (targetZoom - currentZoom) * 0.1;
 
     return { currentZoom };

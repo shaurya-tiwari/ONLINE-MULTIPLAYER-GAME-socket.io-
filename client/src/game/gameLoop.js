@@ -8,6 +8,7 @@ import { getFinishLinePosition } from '../constants/raceLength';
 import { getShakeOffset, triggerShake } from '../game-features/cameraShake';
 import { updateVisualEffects, drawWorldEffects, drawScreenEffects, createDustPuff } from '../game-features/visualEffects';
 import { startCountdown, updateCountdown, renderCountdown, isRaceLocked } from '../game-features/countdown';
+import { isFinalSprint } from '../game-features/playerspeedup';
 
 
 let animationFrameId;
@@ -208,7 +209,7 @@ const update = () => {
             }
         }
     } else {
-        updatePlayerPhysics(player, inputs, frameCount);
+        updatePlayerPhysics(player, inputs, frameCount, MAP_LENGTH);
     }
 
     if (mapData && mapData.obstacles) {
@@ -269,7 +270,10 @@ const render = () => {
     if (!ctx || !canvas) return;
 
     // Juice Features Update
-    const { currentZoom } = updateVisualEffects(users[myId]?.vx || 0, inputs.right);
+    const me = users[myId];
+    const progress = me ? me.x / MAP_LENGTH : 0;
+    const sprinting = inputs.right || isFinalSprint(progress);
+    const { currentZoom } = updateVisualEffects(me?.vx || 0, sprinting);
     const shake = getShakeOffset();
 
     updateRemotePlayers(); // Update remote smoothed positions
