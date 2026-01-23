@@ -7,6 +7,7 @@ import { getFinishLinePosition } from '../constants/raceLength';
 // Juice Features
 import { getShakeOffset, triggerShake } from '../game-features/cameraShake';
 import { updateVisualEffects, drawWorldEffects, drawScreenEffects, createDustPuff } from '../game-features/visualEffects';
+import { startCountdown, updateCountdown, renderCountdown, isRaceLocked } from '../game-features/countdown';
 
 
 let animationFrameId;
@@ -86,6 +87,9 @@ export const startGameLoop = (canvasElem, socket, playerId, players, gameMap, ro
 
     // Set dynamic Map Length based on room selection
     MAP_LENGTH = getFinishLinePosition(raceLengthLabel);
+
+    // Reset and start Countdown
+    startCountdown();
 
     // Reset inputs to prevent auto-running if key was held during reset
     clearInputs();
@@ -179,6 +183,15 @@ const update = () => {
     if (!users[myId]) return;
 
     const player = users[myId];
+
+    // Update Countdown
+    updateCountdown(() => {
+        // Callback when "GO!" hits
+        triggerShake(15, 20);
+        createDustPuff(player.x + player.w / 2, 500, 15);
+    });
+
+    if (isRaceLocked()) return;
 
     // Check Finish
     if (player.x >= MAP_LENGTH) {
@@ -454,8 +467,10 @@ const render = () => {
     drawScreenEffects(ctx, canvas.width, canvas.height);
 
     // 5. HUD - Screen Space
-
     renderHUD();
+
+    // 5.5 Race Countdown
+    renderCountdown(ctx, canvas.width, canvas.height, Math.max(0.6, Math.min(1.0, canvas.width / 1200)));
 
     // Removed renderGameOver() as we are using React Overlay now
 };
