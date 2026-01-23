@@ -1,9 +1,7 @@
 /**
- * PRO-SCALE ASSET LOADER & CACHING SYSTEM
- * Implements 3-level caching: 
- * 1. Module Level Globbing (Vite)
- * 2. In-Memory Image Object Cache (Persistence across restarts)
- * 3. Browser Cache optimization via pre-fetching
+ * PRO-SCALE ASSET LOADER & CACHING SYSTEM (DSA REFACTOR)
+ * Improvement: Uses ImageBitmap for off-thread decoding and GPU-ready textures.
+ * Structure: Map<string, ImageBitmap>
  */
 
 // 1. Module Level Cache (Vite Globs)
@@ -19,7 +17,7 @@ import stickmanStillSrc from '../assets/stickman/stickmanStill.png';
 import stickmanGifSrc from '../assets/stickman/stickman.gif';
 import pageBgSrc from '../assets/page/page.jpg';
 
-// Helpers to sort glob results (ensures animation frame order)
+// Helpers to sort glob results
 const getModules = (globResult) => {
     const sortedKeys = Object.keys(globResult).sort((a, b) => {
         const numA = (a.match(/\d+/) || [0])[0];
@@ -29,8 +27,9 @@ const getModules = (globResult) => {
     return sortedKeys.map(key => globResult[key].default);
 };
 
-// 2. In-Memory Persistent Cache (O(1) Access)
-const assetCache = new Map();
+// 2. In-Memory Persistent Cache (Map<string, ImageBitmap>)
+const bitmapCache = new Map();
+
 const assetCategories = {
     tree: getModules(treeImages),
     ground: getModules(groundObImages),
@@ -46,76 +45,65 @@ const assetCategories = {
 };
 
 /**
- * Core Caching Logic: Load into Image object and store in Map
+ * DSA Change: Load as ImageBitmap
+ * Benefits: Background thread decoding, zero main-thread jank on draw.
  */
-const loadToCache = (src) => {
-    if (assetCache.has(src)) return assetCache.get(src);
+const loadToCache = async (src) => {
+    if (bitmapCache.has(src)) return bitmapCache.get(src);
 
-    const img = new Image();
-    img.src = src;
-    // We return a promise that resolves when the image is decoded and ready in memory
-    const promise = new Promise((resolve, reject) => {
-        img.onload = () => resolve(img);
-        img.onerror = () => {
-            console.warn(`Failed to load asset: ${src}`);
-            resolve(img); // Resolve anyway to not block game, but log it
-        };
-    });
+    try {
+        // Fetch Blob then createImageBitmap
+        const response = await fetch(src);
+        const blob = await response.blob();
+        const bitmap = await createImageBitmap(blob);
 
-    assetCache.set(src, { img, promise });
-    return { img, promise };
+        bitmapCache.set(src, bitmap);
+        return bitmap;
+    } catch (e) {
+        console.warn(`Failed to process bitmap: ${src}`, e);
+        return null;
+    }
 };
 
-// Ready-to-use exports
-export let stickmanStill = new Image();
-export let stickmanGif = new Image();
-export let pageBg = pageBgSrc; // Export src for CSS usage
+// Exports for direct access (Will be ImageBitmaps after preload)
+export let stickmanStill = null;
+export let stickmanGif = null;
+export let pageBg = pageBgSrc; // Keep str for CSS
 
-/**
- * Preload All System: Bridges logic between App start and Game Loop
- */
+// Preload System
 export const preloadAllAssets = async () => {
-    console.time("Asset Preload");
+    // console.time("Asset Preload (Bitmap)");
     const loadBatch = [];
 
-    // Batch load categories
+    // Queue all loads
     Object.values(assetCategories).forEach(srcs => {
         if (Array.isArray(srcs)) {
-            srcs.forEach(src => loadBatch.push(loadToCache(src).promise));
+            srcs.forEach(src => loadBatch.push(loadToCache(src)));
         } else {
-            Object.values(srcs).forEach(src => loadBatch.push(loadToCache(src).promise));
+            Object.values(srcs).forEach(src => loadBatch.push(loadToCache(src)));
         }
     });
 
-    // Wait for all to be in browser/memory cache
-    const loadedAssets = await Promise.all(loadBatch);
+    await Promise.all(loadBatch);
 
     // Sync individual exports
-    stickmanStill = loadToCache(stickmanStillSrc).img;
-    stickmanGif = loadToCache(stickmanGifSrc).img;
+    stickmanStill = bitmapCache.get(stickmanStillSrc);
+    stickmanGif = bitmapCache.get(stickmanGifSrc);
 
-    console.timeEnd("Asset Preload");
+    // console.timeEnd("Asset Preload (Bitmap)");
     return true;
 };
 
-/**
- * O(1) Snapshot Retrieval
- * Never reloads images, always returns from persistent Map
- */
+// O(1) Snapshot Retrieval
 export const getAsset = (type, index) => {
     const srcs = assetCategories[type];
     if (!srcs || srcs.length === 0) return null;
-
     const src = srcs[index % srcs.length];
-    return loadToCache(src).img;
+    return bitmapCache.get(src); // Returns ImageBitmap
 };
 
-// Kickoff initial parse
-Object.entries(assetCategories).forEach(([type, srcs]) => {
-    if (Array.isArray(srcs)) {
-        srcs.forEach(src => loadToCache(src));
-    }
-});
-loadToCache(stickmanStillSrc);
-loadToCache(stickmanGifSrc);
-loadToCache(pageBgSrc);
+export const getAssetSrc = (type, index) => {
+    // Helper if src needed for non-canvas
+    const srcs = assetCategories[type];
+    return srcs ? srcs[index % srcs.length] : null;
+};

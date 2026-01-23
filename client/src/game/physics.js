@@ -1,6 +1,12 @@
+/**
+ * DSA REFACTOR: Physics
+ * Improvement: Bitmask State Flags (Integer) instead of Strings
+ */
+
 import { triggerShake } from '../game-features/cameraShake';
 import { createDustPuff, createRunDust } from '../game-features/visualEffects';
 import { getSpeedMultiplier } from '../game-features/playerspeedup';
+import { STATE_IDLE, STATE_RUN, STATE_JUMP, STATE_SLIDE, STATE_FINISHED } from './dsaConstants';
 
 export const PHYSICS_CONSTANTS = {
     GRAVITY: 0.8,
@@ -20,17 +26,24 @@ export const createPlayerState = (id, name, x = 100) => ({
     w: PHYSICS_CONSTANTS.PLAYER_WIDTH,
     h: PHYSICS_CONSTANTS.PLAYER_HEIGHT_STANDING,
     vy: 0,
-    state: 'idle', // idle, run, jump, slide
-    isGrounded: true
+    state: STATE_IDLE, // Bitmask
+    finishTime: 0,
+    isGrounded: true,
+    slideStartTime: 0
 });
 
-export const updatePlayerPhysics = (player, inputs, frameCount, raceLength = 10000) => {
+export const updatePlayerPhysics = (player, inputs, frameCount, raceLength = 10000, dt = 0.016) => {
+    // --- 0. Time Scale for Frame Independence ---
+    const timeScale = dt * 60;
+
     // --- 1. Determine Desired Ground State (Slide vs Run vs Idle) ---
 
-    // Check Slide Timer
+    // Bitwise check for slide
+    const isSliding = (player.state & STATE_SLIDE) !== 0;
+
     let wantSlide = false;
-    if (inputs.slide && (inputs.right || player.state === 'slide')) {
-        if (player.state !== 'slide') {
+    if (inputs.slide && (inputs.right || isSliding)) {
+        if (!isSliding) {
             player.slideStartTime = Date.now();
         }
         const elapsed = Date.now() - (player.slideStartTime || 0);
@@ -46,41 +59,44 @@ export const updatePlayerPhysics = (player, inputs, frameCount, raceLength = 100
     // --- 2. Calculate Dynamic Speed ---
     const progress = Math.max(0, Math.min(1, player.x / raceLength));
     const speedMultiplier = getSpeedMultiplier(progress);
-    const currentRunSpeed = PHYSICS_CONSTANTS.RUN_SPEED * speedMultiplier;
+    // Scale speed by timeScale
+    const currentRunSpeed = (PHYSICS_CONSTANTS.RUN_SPEED * speedMultiplier) * timeScale;
 
-    // --- 3. Physics Sub-stepping (Production Stability) ---
-    // We run physics in 2 smaller steps to prevent "tunneling" through obstacles
+    // --- 3. Physics Sub-stepping ---
     const SUB_STEPS = 2;
     const stepMoveX = inputs.right ? currentRunSpeed / SUB_STEPS : 0;
-    const stepJumpForce = (inputs.jump && player.isGrounded && !wantSlide) ? PHYSICS_CONSTANTS.JUMP_FORCE : 0;
+    // Scale jump force
+    const stepJumpForce = (inputs.jump && player.isGrounded && !wantSlide) ? (PHYSICS_CONSTANTS.JUMP_FORCE * timeScale) : 0;
 
-    // Track previous grounded state for landing effects
     const wasGrounded = player.isGrounded;
 
-    // Apply jump initial velocity once
     if (stepJumpForce !== 0) {
         player.vy = stepJumpForce;
         player.isGrounded = false;
-        createDustPuff(player.x + player.w / 2, PHYSICS_CONSTANTS.GROUND_Y, 3); // Jump puff
+        createDustPuff(player.x + player.w / 2, PHYSICS_CONSTANTS.GROUND_Y, 3);
     }
 
     for (let s = 0; s < SUB_STEPS; s++) {
-        // Horizontal Movement
+        // Horizontal
         player.x += stepMoveX;
-        player.vx = inputs.right ? stepMoveX * SUB_STEPS : 0; // Track actual speed per frame
 
-        // Spawn small running dust
+        // Running Dust
         if (player.isGrounded && inputs.right && frameCount % 12 === 0) {
             createRunDust(player.x, PHYSICS_CONSTANTS.GROUND_Y);
         }
 
-        // Gravity
-        player.y += player.vy / SUB_STEPS;
+        // Gravity - Scaled by timeScale
+        const gravityPerStep = (PHYSICS_CONSTANTS.GRAVITY * timeScale) / SUB_STEPS;
+
+        // Position update
+        player.y += (player.vy * timeScale) / SUB_STEPS;
+
         if (!player.isGrounded) {
-            player.vy += PHYSICS_CONSTANTS.GRAVITY / SUB_STEPS;
+            // Accel gravity
+            player.vy += gravityPerStep;
         }
 
-        // Ground Collision Resolution (Simplified for sub-steps)
+        // Ground Collision
         let ch = wantSlide ? PHYSICS_CONSTANTS.PLAYER_HEIGHT_SLIDING : PHYSICS_CONSTANTS.PLAYER_HEIGHT_STANDING;
         let groundY = PHYSICS_CONSTANTS.GROUND_Y - ch;
 
@@ -89,7 +105,6 @@ export const updatePlayerPhysics = (player, inputs, frameCount, raceLength = 100
             player.vy = 0;
             player.isGrounded = true;
 
-            // Landing Juice!
             if (!wasGrounded) {
                 triggerShake(4, 10);
                 createDustPuff(player.x + player.w / 2, PHYSICS_CONSTANTS.GROUND_Y, 8);
@@ -99,26 +114,36 @@ export const updatePlayerPhysics = (player, inputs, frameCount, raceLength = 100
         }
     }
 
-    // --- 3. Final State & Dimensions Sync ---
+    // --- 3. Final State Update (Bitmask) ---
+    // Reset State
+    let newState = STATE_IDLE;
+
     if (!player.isGrounded) {
-        player.state = 'jump';
+        newState = STATE_JUMP;
         player.h = PHYSICS_CONSTANTS.PLAYER_HEIGHT_STANDING;
     }
     else if (wantSlide) {
-        player.state = 'slide';
+        newState = STATE_SLIDE;
         player.h = PHYSICS_CONSTANTS.PLAYER_HEIGHT_SLIDING;
         player.y = PHYSICS_CONSTANTS.GROUND_Y - PHYSICS_CONSTANTS.PLAYER_HEIGHT_SLIDING;
     }
     else if (inputs.right) {
-        player.state = 'run';
+        newState = STATE_RUN;
         player.h = PHYSICS_CONSTANTS.PLAYER_HEIGHT_STANDING;
         player.y = PHYSICS_CONSTANTS.GROUND_Y - PHYSICS_CONSTANTS.PLAYER_HEIGHT_STANDING;
     }
     else {
-        player.state = 'idle';
+        newState = STATE_IDLE;
         player.h = PHYSICS_CONSTANTS.PLAYER_HEIGHT_STANDING;
         player.y = PHYSICS_CONSTANTS.GROUND_Y - PHYSICS_CONSTANTS.PLAYER_HEIGHT_STANDING;
     }
+
+    // Helper: Preserve FINISHED flag if set
+    if ((player.state & STATE_FINISHED) !== 0) {
+        newState |= STATE_FINISHED;
+    }
+
+    player.state = newState;
 
     return player;
 };

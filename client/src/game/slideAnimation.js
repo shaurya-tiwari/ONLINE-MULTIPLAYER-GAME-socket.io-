@@ -10,7 +10,7 @@ export const drawSlideStickman = (ctx, x, y, width, height, frameCount) => {
 
     const img = getAsset('slide', frameIndex);
 
-    if (img && img.complete) {
+    if (img) {
         ctx.drawImage(img, x, y, width, height);
     }
 };

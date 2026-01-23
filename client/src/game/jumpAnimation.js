@@ -9,9 +9,7 @@ export const drawJumpStickman = (ctx, x, y, width, height, frameCount) => {
 
     const img = getAsset('jump', frameIndex);
 
-    if (img && img.complete) {
-        // Use the passed dimensions and position
-        // Assuming (x, y) is the top-left of the destination box
+    if (img) {
         ctx.drawImage(img, x, y, width, height);
     }
 };

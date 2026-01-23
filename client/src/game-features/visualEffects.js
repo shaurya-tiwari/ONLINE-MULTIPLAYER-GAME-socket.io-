@@ -1,140 +1,126 @@
 /**
- * Visual Effects: Dust and Speed Lines
- * Adds polish particles and motion effects with Object Pooling for Performance
+ * VISUAL EFFECTS (DSA_REFACTOR)
+ * System: Particle System
+ * Data Structure: Stack (Free List) + Structure of Arrays (TypedArrays)
+ * Goal: O(1) spawn, Zero GC, Cache Friendliness
  */
 
-// --- 1. Object Pooling System ---
-const MAX_PARTICLES = 100;
-const MAX_SPEED_LINES = 30;
+// Constants
+const MAX_PARTICLES = 1000; // Increased capacity due to efficiency
+const GRAVITY = 0.2;
 
-// Pre-allocate pools to prevent GC churn (Crirical for stability)
-const particlePool = Array.from({ length: MAX_PARTICLES }, () => ({
-    active: false,
-    x: 0, y: 0, vx: 0, vy: 0,
-    life: 0, size: 0, decay: 0
-}));
+// --- Structure of Arrays (SoA) Layout ---
+// Contiguous memory blocks for CPU cache locality
+const posX = new Float32Array(MAX_PARTICLES);
+const posY = new Float32Array(MAX_PARTICLES);
+const velX = new Float32Array(MAX_PARTICLES);
+const velY = new Float32Array(MAX_PARTICLES);
+const life = new Float32Array(MAX_PARTICLES);
+const decay = new Float32Array(MAX_PARTICLES);
+const size = new Float32Array(MAX_PARTICLES);
+const active = new Uint8Array(MAX_PARTICLES); // 0 or 1
 
-const speedLinePool = Array.from({ length: MAX_SPEED_LINES }, () => ({
-    active: false,
-    x: 0, y: 0, len: 0, opacity: 0
-}));
+// --- Stack for Free Indices (O(1) Allocation) ---
+// No searching "find()", just pop()
+const freeStack = new Int16Array(MAX_PARTICLES);
+let stackTop = MAX_PARTICLES - 1;
 
-let targetZoom = 1.0;
+// Initialize Stack
+for (let i = 0; i < MAX_PARTICLES; i++) {
+    freeStack[i] = i;
+}
+
+// Logic Variables
 let currentZoom = 1.0;
+let targetZoom = 1.0;
 
 /**
- * Get an inactive particle from the pool
+ * Spawns a particle in O(1)
  */
-const getParticle = () => {
-    return particlePool.find(p => !p.active);
+const spawnParticle = (x, y, vx, vy, l, d, s) => {
+    if (stackTop < 0) return; // Pool empty
+
+    const index = freeStack[stackTop--]; // Pop
+
+    posX[index] = x;
+    posY[index] = y;
+    velX[index] = vx;
+    velY[index] = vy;
+    life[index] = l;
+    decay[index] = d;
+    size[index] = s;
+    active[index] = 1;
 };
 
-/**
- * Get an inactive speed line from the pool
- */
-const getSpeedLine = () => {
-    return speedLinePool.find(l => !l.active);
-};
-
-/**
- * Create a dust puff effect (Uses Pooling)
- */
 export const createDustPuff = (x, y, count = 5) => {
-    let created = 0;
-    for (let i = 0; i < particlePool.length && created < count; i++) {
-        const p = particlePool[i];
-        if (!p.active) {
-            p.active = true;
-            p.x = x;
-            p.y = y;
-            p.vx = (Math.random() - 0.5) * 4 - 2;
-            p.vy = -Math.random() * 2;
-            p.life = 1.0;
-            p.size = Math.random() * 6 + 2;
-            p.decay = 0.02 + Math.random() * 0.02;
-            created++;
+    for (let i = 0; i < count; i++) {
+        spawnParticle(
+            x,
+            y,
+            (Math.random() - 0.5) * 4 - 2,
+            -Math.random() * 2,
+            1.0,
+            0.02 + Math.random() * 0.02,
+            Math.random() * 6 + 2
+        );
+    }
+};
+
+export const createRunDust = (x, y) => {
+    spawnParticle(
+        x + (Math.random() - 0.5) * 20,
+        y,
+        -3 - Math.random() * 2,
+        -Math.random() * 1,
+        0.6,
+        0.04,
+        Math.random() * 4 + 1
+    );
+};
+
+export const updateVisualEffects = (playerSpeed, isSprinting) => {
+    // Iterate only through MAX_PARTICLES? 
+    // To match O(1) spawn, we ideally iterate only active, but swapping is complex.
+    // Iterating linear array is fast.
+
+    for (let i = 0; i < MAX_PARTICLES; i++) {
+        if (active[i] === 1) {
+            // Update Physics
+            posX[i] += velX[i];
+            posY[i] += velY[i];
+            life[i] -= decay[i];
+
+            if (life[i] <= 0) {
+                active[i] = 0;
+                freeStack[++stackTop] = i; // Push back to stack
+            }
         }
     }
-};
 
-/**
- * Create a specialized "Run Dust" particle (Uses Pooling)
- */
-export const createRunDust = (x, y) => {
-    const p = getParticle();
-    if (p) {
-        p.active = true;
-        p.x = x + (Math.random() - 0.5) * 20;
-        p.y = y;
-        p.vx = -3 - Math.random() * 2;
-        p.vy = -Math.random() * 1;
-        p.life = 0.6;
-        p.size = Math.random() * 4 + 1;
-        p.decay = 0.04;
-    }
-};
-
-/**
- * Update logic for effects (No new allocations)
- */
-export const updateVisualEffects = (playerSpeed, isSprinting) => {
-    // 1. Update Particles
-    for (const p of particlePool) {
-        if (!p.active) continue;
-
-        p.x += p.vx;
-        p.y += p.vy;
-        p.life -= p.decay;
-        if (p.life <= 0) p.active = false;
-    }
-
-    // 2. Speed Lines Removed (User Request)
-    speedLinePool.forEach(l => l.active = false);
-
-    /* 
-    if (isSprinting && playerSpeed > 2) {
-        ... removed ...
-    }
-    */
-
-    // 3. Update Zoom
     targetZoom = isSprinting ? 0.85 : 1.0;
     currentZoom += (targetZoom - currentZoom) * 0.1;
 
     return { currentZoom };
 };
 
-/**
- * Draw World Space Effects (Dust)
- */
 export const drawWorldEffects = (ctx) => {
     ctx.save();
-    particlePool.forEach(p => {
-        if (!p.active) return;
-        ctx.globalAlpha = Math.max(0, p.life);
-        ctx.fillStyle = '#bbb';
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fill();
-    });
+    ctx.fillStyle = '#bbb';
+
+    // Batch drawing if possible, but canvas context switch is expensive.
+    // Simple iteration.
+    for (let i = 0; i < MAX_PARTICLES; i++) {
+        if (active[i] === 1) {
+            ctx.globalAlpha = Math.max(0, life[i]);
+            ctx.beginPath();
+            ctx.arc(posX[i], posY[i], size[i], 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
     ctx.restore();
 };
 
-/**
- * Draw Screen Space Effects (Speed Lines)
- */
-export const drawScreenEffects = (ctx, canvasWidth, canvasHeight) => {
-    ctx.save();
-    ctx.strokeStyle = 'rgba(0,0,0,0.1)';
-    ctx.lineWidth = 2;
-    speedLinePool.forEach(line => {
-        if (!line.active) return;
-        const x = (line.x / 1200) * canvasWidth;
-        const y = (line.y / 600) * canvasHeight;
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo(x + line.len, y);
-        ctx.stroke();
-    });
-    ctx.restore();
+export const drawScreenEffects = (ctx, w, h) => {
+    // Speed lines removed in previous version, structure kept empty for API compatibility
 };

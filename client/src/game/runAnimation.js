@@ -16,7 +16,7 @@ export const drawRunStickman = (ctx, x, y, width, height, frameCount) => {
 
     const img = getAsset('run', frameIndex);
 
-    if (img && img.complete) {
+    if (img) {
         ctx.drawImage(img, x, y, width, height);
     }
 };

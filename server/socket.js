@@ -1,4 +1,4 @@
-const { createRoom, joinRoom, getRoom, leaveRoom } = require('./rooms');
+const { createRoom, joinRoom, getRoom, leaveRoom, serializeRoomPlayers } = require('./rooms');
 const { generateTrack } = require('./mapGenerator');
 const { validateRaceLength, getFinishLinePosition } = require('./raceLength');
 
@@ -25,9 +25,11 @@ module.exports = (io) => {
                 socket.emit('error', { message: result.error });
             } else {
                 socket.join(code);
-                // Notify everyone in the room (including sender) about the new state
+                // Serialize the Map objects to Plain Objects for network transport (until Client supports full binary Lobby, we keep JSON for lobby)
+                const playersObj = serializeRoomPlayers(result.room);
+
                 io.to(code).emit('update_room', {
-                    players: result.room.players,
+                    players: playersObj,
                     code: code,
                     raceLength: result.room.raceLength
                 });
@@ -38,46 +40,52 @@ module.exports = (io) => {
         socket.on('start_game', ({ code }) => {
             const room = getRoom(code);
             if (room) {
-                // Ensure the starter (Host) is actually in the socket room (fix for reconnects)
                 socket.join(code);
-
-                // Get finish line position based on selected length
                 const pixelLength = getFinishLinePosition(room.raceLength);
 
-                // Generate consistent map for everyone
+                // DSA Refactor: Generate Packed Int16Array Map
                 const gameMap = generateTrack(pixelLength);
                 room.gameState = 'racing';
 
+                // Socket.io automatically encodes TypedArrays as Buffers
                 io.to(code).emit('game_started', {
-                    gameMap: gameMap,
+                    gameMap: gameMap, // Binary Buffer on client
                     raceLength: room.raceLength
                 });
                 console.log(`Game started in room ${code} with length ${room.raceLength}`);
             }
         });
 
-        socket.on('player_update', ({ code, playerState }) => {
-            // Basic rate limiting: Only allow ~30 updates per second per socket
-            const now = Date.now();
-            if (socket.lastUpdate && now - socket.lastUpdate < 30) return;
-            socket.lastUpdate = now;
+        // DSA REFACTOR: Binary Player Update Handling
+        // Expects Buffer with [RoomCode(4bytes), PlayerData...]
+        socket.on('player_update', (data) => {
+            // Check for Binary Data
+            if (Buffer.isBuffer(data) || data instanceof Uint8Array) {
+                // Manually extract Room Code (first 4 bytes ASCII) to know where to broadcast
+                // This saves sending JSON wrapper
+                const codeBuf = data.slice(0, 4);
+                const code = codeBuf.toString('utf8');
 
-            // Broadcast to everyone else in the room
-            socket.to(code).emit('player_updated', playerState);
+                // Rate limit (per socket)
+                const now = Date.now();
+                if (socket.lastUpdate && now - socket.lastUpdate < 30) return;
+                socket.lastUpdate = now;
+
+                // Relay buffer to neighbors (Zero-Copy JSON parsing)
+                socket.to(code).emit('player_updated', data);
+            } else {
+                // Fallback for JSON (Backward compatibility if needed, else ignore)
+            }
         });
 
         socket.on('player_won', ({ code, name, x }) => {
             const room = getRoom(code);
             if (!room) return;
-
-            // Anti-Cheat: Validate finish line position
             const requiredX = getFinishLinePosition(room.raceLength);
             if (x < requiredX - 50) {
-                console.warn(`Suspicious player_won from ${name}: x=${x} vs required=${requiredX}`);
+                console.warn(`Suspicious player_won from ${name}: x=${x}`);
                 return;
             }
-
-            // Broadcast to EVERYONE in the room (including sender) that game is over
             io.to(code).emit('game_over', { winner: name });
             console.log(`Player ${name} won in room ${code}`);
         });
@@ -85,7 +93,6 @@ module.exports = (io) => {
         socket.on('restart_game', ({ code }) => {
             const room = getRoom(code);
             if (room) {
-                // Generate New Map
                 const pixelLength = getFinishLinePosition(room.raceLength);
                 const gameMap = generateTrack(pixelLength);
 
@@ -93,12 +100,11 @@ module.exports = (io) => {
                     gameMap: gameMap,
                     raceLength: room.raceLength
                 });
-                console.log(`Game restarted in room ${code} with length ${room.raceLength}`);
+                console.log(`Game restarted in room ${code}`);
             }
         });
 
         socket.on('disconnecting', () => {
-            // Check all rooms the socket is in
             const rooms = Array.from(socket.rooms);
             rooms.forEach(code => {
                 if (code !== socket.id) {
@@ -106,8 +112,10 @@ module.exports = (io) => {
                     if (room) {
                         const result = leaveRoom(socket.id);
                         if (result.code) {
+                            // Serialize Map -> Object
+                            const playersObj = serializeRoomPlayers(room);
                             io.to(result.code).emit('update_room', {
-                                players: room.players,
+                                players: playersObj,
                                 code: result.code,
                                 raceLength: room.raceLength
                             });
@@ -119,7 +127,6 @@ module.exports = (io) => {
 
         socket.on('disconnect', () => {
             console.log(`User Disconnected: ${socket.id}`);
-            // Backup cleanup in case disconnecting missed something
             leaveRoom(socket.id);
         });
     });
