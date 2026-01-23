@@ -451,14 +451,18 @@ const renderGameOver = () => {
 };
 
 const renderHUD = () => {
-    const padding = 20;
-    const boardW = 220;
+    // Dynamic responsive scaling based on canvas width
+    // Extra small for <= 400px screens
+    const scale = canvas.width <= 400 ? 0.4 : canvas.width < 640 ? 0.65 : canvas.width < 1024 ? 0.85 : 1.0;
+
+    const padding = 20 * scale;
+    const boardW = 220 * scale;
     // Move to Left side, below the "ROOM" badge (approx y=80)
-    const x = 20;
-    const y = 80;
+    const x = 20 * scale;
+    const y = 80 * scale;
 
     const sortedPlayers = Object.values(users).sort((a, b) => b.x - a.x);
-    const boardH = 50 + (sortedPlayers.length * 36);
+    const boardH = (50 * scale) + (sortedPlayers.length * (36 * scale));
 
     ctx.save();
 
@@ -488,39 +492,39 @@ const renderHUD = () => {
 
     // Header
     ctx.fillStyle = '#000'; // Black text
-    ctx.font = 'bold 16px "Mono", monospace'; // Mono font to match
+    ctx.font = `bold ${16 * scale}px "Mono", monospace`; // Mono font to match
     ctx.textAlign = 'left';
-    ctx.fillText("LEADERBOARD", x + 16, y + 26);
+    ctx.fillText("LEADERBOARD", x + (16 * scale), y + (26 * scale));
 
     // Rows
-    ctx.font = '600 13px "Inter", sans-serif';
+    ctx.font = `600 ${13 * scale}px "Inter", sans-serif`;
     sortedPlayers.forEach((p, index) => {
-        const rowY = y + 50 + (index * 36);
+        const rowY = y + (50 * scale) + (index * (36 * scale));
 
         // Rank/Name
         ctx.fillStyle = '#000'; // Black text
         const nameStr = p.name.length > 10 ? p.name.substring(0, 9) + '..' : p.name;
         // Highlight self?
         if (p.id === myId) {
-            ctx.font = 'bold 13px "Inter", sans-serif';
-            ctx.fillText(`> ${index + 1}. ${nameStr}`, x + 12, rowY);
+            ctx.font = `bold ${13 * scale}px "Inter", sans-serif`;
+            ctx.fillText(`> ${index + 1}. ${nameStr}`, x + (12 * scale), rowY);
         } else {
-            ctx.font = '600 13px "Inter", sans-serif';
-            ctx.fillText(`${index + 1}. ${nameStr}`, x + 16, rowY);
+            ctx.font = `600 ${13 * scale}px "Inter", sans-serif`;
+            ctx.fillText(`${index + 1}. ${nameStr}`, x + (16 * scale), rowY);
         }
 
         // Progress Bar Background
-        const barW = 80;
-        const barX = x + boardW - barW - 16;
+        const barW = 80 * scale;
+        const barX = x + boardW - barW - (16 * scale);
         ctx.fillStyle = 'rgba(0,0,0,0.1)';
         ctx.beginPath();
         // ctx.roundRect(barX, rowY - 8, barW, 8, 4);
-        ctx.rect(barX, rowY - 8, barW, 8); // Sharp rects
+        ctx.rect(barX, rowY - (8 * scale), barW, 8 * scale); // Sharp rects
         ctx.fill();
         // Border for bar
         ctx.strokeStyle = '#000';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(barX, rowY - 8, barW, 8);
+        ctx.lineWidth = 1 * scale;
+        ctx.strokeRect(barX, rowY - (8 * scale), barW, 8 * scale);
 
         // Progress Fill
         const progress = Math.min(p.x / MAP_LENGTH, 1);
@@ -528,7 +532,7 @@ const renderHUD = () => {
         ctx.beginPath();
         // Clamped width
         const fillW = Math.max(0, barW * progress);
-        ctx.fillRect(barX, rowY - 8, fillW, 8);
+        ctx.fillRect(barX, rowY - (8 * scale), fillW, 8 * scale);
     });
 
     ctx.restore();
