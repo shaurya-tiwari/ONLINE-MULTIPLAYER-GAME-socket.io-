@@ -4,6 +4,7 @@ import HomeScreen from './screens/HomeScreen';
 import LobbyScreen from './screens/LobbyScreen';
 import GameScreen from './screens/GameScreen';
 import pageBg from './assets/page/page.jpg';
+import { preloadAllAssets } from './game/AssetLoader';
 
 const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
 const envUrl = import.meta.env.VITE_SERVER_URL;
@@ -20,6 +21,7 @@ const socket = io(serverUrl, {
 });
 
 function App() {
+    const [isLoading, setIsLoading] = useState(true);
     const [screen, setScreen] = useState('home'); // home, lobby, game
     const [playerName, setPlayerName] = useState('');
     const [roomCode, setRoomCode] = useState('');
@@ -33,6 +35,13 @@ function App() {
     useEffect(() => { playerNameRef.current = playerName; }, [playerName]);
 
     useEffect(() => {
+        // 🚀 PRO PRELOADER: Load all assets before showing any UI
+        const load = async () => {
+            await preloadAllAssets();
+            setIsLoading(false);
+        };
+        load();
+
         const onConnect = () => {
             console.log("Connected to server:", socket.id);
         };
@@ -104,6 +113,17 @@ function App() {
     const handleStartRace = () => {
         socket.emit('start_game', { code: roomCode });
     };
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen w-full flex flex-col justify-center items-center bg-[#f0f0f0] text-black">
+                <div className="w-16 h-16 border-4 border-black border-t-marker rounded-full animate-spin mb-4"></div>
+                <h1 className="text-2xl font-black uppercase tracking-widest animate-pulse italic">
+                    Loading Assets...
+                </h1>
+            </div>
+        );
+    }
 
     return (
         <div

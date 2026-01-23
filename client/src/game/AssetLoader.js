@@ -1,4 +1,12 @@
-// Use Vite's glob import to get all images from directories
+/**
+ * PRO-SCALE ASSET LOADER & CACHING SYSTEM
+ * Implements 3-level caching: 
+ * 1. Module Level Globbing (Vite)
+ * 2. In-Memory Image Object Cache (Persistence across restarts)
+ * 3. Browser Cache optimization via pre-fetching
+ */
+
+// 1. Module Level Cache (Vite Globs)
 const treeImages = import.meta.glob('../assets/trees/*.{png,jpg,jpeg,svg}', { eager: true });
 const groundObImages = import.meta.glob('../assets/obstacles/ground/*.{png,jpg,jpeg,svg}', { eager: true });
 const airObImages = import.meta.glob('../assets/obstacles/air/*.{png,jpg,jpeg,svg}', { eager: true });
@@ -6,10 +14,13 @@ const jumpImagesGlob = import.meta.glob('../assets/jump images/*.{png,jpg,jpeg,s
 const runImagesGlob = import.meta.glob('../assets/run/*.{png,jpg,jpeg,svg}', { eager: true });
 const slideImagesGlob = import.meta.glob('../assets/slide/*.{png,jpg,jpeg,svg}', { eager: true });
 
-// Convert object to array of values (modules)
+// Background & Specials
+import stickmanStillSrc from '../assets/stickman/stickmanStill.png';
+import stickmanGifSrc from '../assets/stickman/stickman.gif';
+import pageBgSrc from '../assets/page/page.jpg';
+
+// Helpers to sort glob results (ensures animation frame order)
 const getModules = (globResult) => {
-    // Sort keys to ensure animation order (jump1, jump2, jump 3, jump4)
-    // We try to find numbers in the filenames and sort by that
     const sortedKeys = Object.keys(globResult).sort((a, b) => {
         const numA = (a.match(/\d+/) || [0])[0];
         const numB = (b.match(/\d+/) || [0])[0];
@@ -18,56 +29,93 @@ const getModules = (globResult) => {
     return sortedKeys.map(key => globResult[key].default);
 };
 
-const trees = getModules(treeImages);
-const groundObs = getModules(groundObImages);
-const airObs = getModules(airObImages);
-const jumpFrames = getModules(jumpImagesGlob);
-const runFrames = getModules(runImagesGlob);
-const slideFrames = getModules(slideImagesGlob);
-
-// Helper to pre-load images
-const loadedImages = new Map([
-    ['tree', []],
-    ['ground', []],
-    ['air', []],
-    ['jump', []],
-    ['run', []],
-    ['slide', []]
-]);
-
-const preload = (srcArray, type) => {
-    const targetArray = loadedImages.get(type);
-    srcArray.forEach(src => {
-        const img = new Image();
-        img.src = src;
-        targetArray.push(img);
-    });
+// 2. In-Memory Persistent Cache (O(1) Access)
+const assetCache = new Map();
+const assetCategories = {
+    tree: getModules(treeImages),
+    ground: getModules(groundObImages),
+    air: getModules(airObImages),
+    jump: getModules(jumpImagesGlob),
+    run: getModules(runImagesGlob),
+    slide: getModules(slideImagesGlob),
+    single: {
+        stickmanStill: stickmanStillSrc,
+        stickmanGif: stickmanGifSrc,
+        pageBg: pageBgSrc
+    }
 };
-
-preload(trees, 'tree');
-preload(groundObs, 'ground');
-preload(airObs, 'air');
-preload(jumpFrames, 'jump');
-preload(runFrames, 'run');
-preload(slideFrames, 'slide');
 
 /**
- * O(1) Asset Retrieval (Optimized for hot render loop)
+ * Core Caching Logic: Load into Image object and store in Map
  */
-export const getAsset = (type, index) => {
-    const arr = loadedImages.get(type);
-    if (!arr || arr.length === 0) return null;
+const loadToCache = (src) => {
+    if (assetCache.has(src)) return assetCache.get(src);
 
-    // Use modulo to cycle through available images deterministically
-    return arr[index % arr.length];
+    const img = new Image();
+    img.src = src;
+    // We return a promise that resolves when the image is decoded and ready in memory
+    const promise = new Promise((resolve, reject) => {
+        img.onload = () => resolve(img);
+        img.onerror = () => {
+            console.warn(`Failed to load asset: ${src}`);
+            resolve(img); // Resolve anyway to not block game, but log it
+        };
+    });
+
+    assetCache.set(src, { img, promise });
+    return { img, promise };
 };
 
-// Stickman Assets
-import stickmanStillSrc from '../assets/stickman/stickmanStill.png';
-import stickmanGifSrc from '../assets/stickman/stickman.gif';
+// Ready-to-use exports
+export let stickmanStill = new Image();
+export let stickmanGif = new Image();
+export let pageBg = pageBgSrc; // Export src for CSS usage
 
-export const stickmanStill = new Image();
-stickmanStill.src = stickmanStillSrc;
+/**
+ * Preload All System: Bridges logic between App start and Game Loop
+ */
+export const preloadAllAssets = async () => {
+    console.time("Asset Preload");
+    const loadBatch = [];
 
-export const stickmanGif = new Image();
-stickmanGif.src = stickmanGifSrc;
+    // Batch load categories
+    Object.values(assetCategories).forEach(srcs => {
+        if (Array.isArray(srcs)) {
+            srcs.forEach(src => loadBatch.push(loadToCache(src).promise));
+        } else {
+            Object.values(srcs).forEach(src => loadBatch.push(loadToCache(src).promise));
+        }
+    });
+
+    // Wait for all to be in browser/memory cache
+    const loadedAssets = await Promise.all(loadBatch);
+
+    // Sync individual exports
+    stickmanStill = loadToCache(stickmanStillSrc).img;
+    stickmanGif = loadToCache(stickmanGifSrc).img;
+
+    console.timeEnd("Asset Preload");
+    return true;
+};
+
+/**
+ * O(1) Snapshot Retrieval
+ * Never reloads images, always returns from persistent Map
+ */
+export const getAsset = (type, index) => {
+    const srcs = assetCategories[type];
+    if (!srcs || srcs.length === 0) return null;
+
+    const src = srcs[index % srcs.length];
+    return loadToCache(src).img;
+};
+
+// Kickoff initial parse
+Object.entries(assetCategories).forEach(([type, srcs]) => {
+    if (Array.isArray(srcs)) {
+        srcs.forEach(src => loadToCache(src));
+    }
+});
+loadToCache(stickmanStillSrc);
+loadToCache(stickmanGifSrc);
+loadToCache(pageBgSrc);

@@ -31,7 +31,13 @@ const PORT = process.env.PORT || 3000;
 FRONTEND SERVE SECTION
 ================================ */
 
-app.use(express.static(path.join(__dirname, "../client/dist")));
+// PRO CONFIG: Long-term browser caching for static assets
+const cacheOptions = {
+    maxAge: '1y',
+    immutable: true,
+    public: true
+};
+app.use(express.static(path.join(__dirname, "../client/dist"), cacheOptions));
 
 app.use((req, res) => {
     res.sendFile(path.join(__dirname, "../client/dist/index.html"));
