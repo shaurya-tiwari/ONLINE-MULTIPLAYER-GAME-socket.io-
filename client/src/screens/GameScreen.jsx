@@ -71,10 +71,10 @@ const GameScreen = ({ socket, roomCode, playerId, players, gameMap }) => {
         <div className="w-full h-full flex flex-col items-center justify-start bg-transparent overflow-hidden relative pt-12 md:justify-center md:pt-0">
             {/* Main Game Container - Transparent to see paper bg */}
             <div className="relative w-full max-w-6xl aspect-video bg-transparent shadow-none overflow-hidden shrink-0 border-2 border-black/50">
-                <canvas ref={canvasRef} className="block w-full h-full object-contain" />
-
-                {/* Canvas Cover (Grass Overlay) */}
+                {/* Canvas Cover (Grass Overlay) - Behind Canvas */}
                 <CanvasCover />
+
+                <canvas ref={canvasRef} className="block w-full h-full object-contain relative z-10" />
 
                 {/* HUD Layer */}
                 <div className="absolute top-4 left-4 pointer-events-none z-10">

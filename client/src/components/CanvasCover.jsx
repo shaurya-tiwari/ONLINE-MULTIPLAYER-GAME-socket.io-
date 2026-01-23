@@ -3,7 +3,7 @@ import grassImg from '../assets/grass/grass.png';
 
 const CanvasCover = () => {
     return (
-        <div className="absolute inset-0 w-full h-full pointer-events-none z-0">
+        <div className="absolute inset-0 w-full h-full pointer-events-none z-1">
             {/* Grass Image - Right Bottom Corner */}
             <img
                 src={grassImg}
