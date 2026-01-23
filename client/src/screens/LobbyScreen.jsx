@@ -10,8 +10,9 @@ const LobbyScreen = ({
     const playerList = Object.values(players || {});
     const [copied, setCopied] = useState(false);
 
-    const cardStyle = "card-paper rough-edge w-full max-w-md flex flex-col gap-8 items-center animate-fade-in";
-    const primaryButtonStyle = "btn-ink transition-all active:scale-95";
+    // Changed: Added max-h-screen and overflow handling to outer card
+    const cardStyle = "card-paper rough-edge w-full max-w-md flex flex-col gap-4 md:gap-8 items-center animate-fade-in max-h-[90vh] overflow-hidden py-8 px-6";
+    const primaryButtonStyle = "btn-ink transition-all active:scale-95 py-4 text-xl";
     const secondaryButtonStyle = "text-sm font-black border-b-2 border-transparent hover:border-ink transition-all mt-4 uppercase tracking-widest opacity-60 hover:opacity-100 cursor-pointer text-center w-full";
 
     const handleCopy = () => {
@@ -21,40 +22,40 @@ const LobbyScreen = ({
     };
 
     return (
-        <div className="w-full h-full flex items-center justify-center p-6 bg-transparent">
+        <div className="w-full h-full flex items-center justify-center p-4 md:p-6 bg-transparent overflow-hidden">
             <div className={cardStyle}>
 
-                {/* Room Code Section */}
-                <div className="w-full text-center flex flex-col items-center gap-4">
+                {/* Room Code Section - Compact on small screens */}
+                <div className="w-full text-center flex flex-col items-center gap-1 md:gap-2 shrink-0">
                     <div className="flex flex-col items-center">
-                        <h2 className="text-sm font-black text-marker uppercase tracking-widest mb-1">Room Identity</h2>
-                        <div className="h-1 w-12 bg-marker mb-4"></div>
+                        <h2 className="text-[10px] md:text-xs font-black text-marker uppercase tracking-widest mb-0.5">Room Identity</h2>
+                        <div className="h-1 w-8 md:w-12 bg-marker mb-1 md:mb-2"></div>
                     </div>
 
                     <div
                         onClick={handleCopy}
                         className="group relative cursor-pointer"
                     >
-                        <span className="text-7xl md:text-8xl font-black tracking-tighter text-black transition-transform group-hover:scale-105 block">
+                        <span className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter text-black transition-transform group-hover:scale-105 block leading-none">
                             {roomCode}
                         </span>
-                        <div className={`absolute -top-8 left-1/2 -translate-x-1/2 bg-ink text-paper text-[10px] px-2 py-1 rounded transition-opacity ${copied ? 'opacity-100' : 'opacity-0'}`}>
+                        <div className={`absolute -top-6 md:-top-8 left-1/2 -translate-x-1/2 bg-ink text-paper text-[10px] px-2 py-1 rounded transition-opacity ${copied ? 'opacity-100' : 'opacity-0'}`}>
                             COPIED!
                         </div>
-                        <p className="text-[10px] font-bold opacity-30 mt-2 uppercase tracking-[0.2em] group-hover:opacity-60 transition-opacity">
+                        <p className="text-[10px] font-bold opacity-30 mt-0.5 md:mt-1 uppercase tracking-[0.2em] group-hover:opacity-60 transition-opacity">
                             Click code to copy
                         </p>
                     </div>
                 </div>
 
-                {/* Player List Section */}
-                <div className="w-full space-y-4">
-                    <div className="flex items-center justify-between border-b-2 border-ink pb-2 mb-6">
-                        <h3 className="font-black uppercase tracking-tighter text-xl italic">Athletes</h3>
-                        <span className="font-black text-sm bg-ink text-paper px-2 py-0.5 rounded-sm">{playerList.length}/4</span>
+                {/* Player List Section - SCROLLABLE to save space */}
+                <div className="w-full flex-grow overflow-y-auto min-h-0 space-y-2 md:space-y-4 px-1 custom-scrollbar">
+                    <div className="flex items-center justify-between border-b-2 border-ink pb-2 mb-2 md:mb-6 sticky top-0 bg-[#f4f1ea] z-10">
+                        <h3 className="font-black uppercase tracking-tighter text-lg md:text-xl italic">Athletes</h3>
+                        <span className="font-black text-xs md:text-sm bg-ink text-paper px-2 py-0.5 rounded-sm">{playerList.length}/4</span>
                     </div>
 
-                    <div className="space-y-3">
+                    <div className="space-y-2 md:space-y-3 pb-2">
                         {playerList.map((player) => (
                             <div key={player.id} className="flex items-center justify-between group p-2 hover:bg-gray-50 transition-colors rounded-sm border-l-4 border-transparent hover:border-marker">
                                 <div className="flex items-center gap-3">
@@ -76,8 +77,8 @@ const LobbyScreen = ({
                     </div>
                 </div>
 
-                {/* Action Section */}
-                <div className="w-full pt-4">
+                {/* Action Section - Fixed at Bottom */}
+                <div className="w-full pt-2 md:pt-4 shrink-0">
                     {isHost ? (
                         <button onClick={onStartGame} className={primaryButtonStyle}>
                             Launch Race
