@@ -453,28 +453,42 @@ const renderGameOver = () => {
 const renderHUD = () => {
     const padding = 20;
     const boardW = 220;
-    const x = canvas.width - boardW - padding;
-    const y = padding;
+    // Move to Left side, below the "ROOM" badge (approx y=80)
+    const x = 20;
+    const y = 80;
 
     const sortedPlayers = Object.values(users).sort((a, b) => b.x - a.x);
     const boardH = 50 + (sortedPlayers.length * 36);
 
-    // Glassmorphism Panel
     ctx.save();
-    ctx.shadowColor = 'rgba(0,0,0,0.2)';
-    ctx.shadowBlur = 15;
-    ctx.shadowOffsetY = 5;
 
-    ctx.fillStyle = 'rgba(30, 30, 30, 0.85)';
+    // Apply "Paper" Style: Rotation and Border
+    // We translate to center of board to rotate, then draw
+    const cx = x + boardW / 2;
+    const cy = y + boardH / 2;
+
+    ctx.translate(cx, cy);
+    ctx.rotate(-0.02); // Slight negative rotation like Room Badge (-1 deg approx)
+    ctx.translate(-cx, -cy);
+
+    // Background (White glass)
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.backdropFilter = 'blur(4px)'; // Note: Canvas doesn't support backdropFilter directly, utilizing fill transparency
     ctx.beginPath();
-    ctx.roundRect(x, y, boardW, boardH, 16);
+    // ctx.roundRect(x, y, boardW, boardH, 2); // Less rounded, more paper-like
+    ctx.rect(x, y, boardW, boardH);
     ctx.fill();
 
+    // Border (Dashed Black)
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#000';
+    ctx.setLineDash([8, 6]); // Dashed
+    ctx.stroke();
+    ctx.setLineDash([]); // Reset
+
     // Header
-    ctx.shadowBlur = 0;
-    ctx.shadowOffsetY = 0;
-    ctx.fillStyle = '#aaa';
-    ctx.font = '600 11px "Inter", sans-serif';
+    ctx.fillStyle = '#000'; // Black text
+    ctx.font = 'bold 16px "Mono", monospace'; // Mono font to match
     ctx.textAlign = 'left';
     ctx.fillText("LEADERBOARD", x + 16, y + 26);
 
@@ -484,26 +498,37 @@ const renderHUD = () => {
         const rowY = y + 50 + (index * 36);
 
         // Rank/Name
-        ctx.fillStyle = p.id === myId ? '#fff' : '#ccc';
+        ctx.fillStyle = '#000'; // Black text
         const nameStr = p.name.length > 10 ? p.name.substring(0, 9) + '..' : p.name;
-        ctx.fillText(`${index + 1}. ${nameStr}`, x + 16, rowY);
+        // Highlight self?
+        if (p.id === myId) {
+            ctx.font = 'bold 13px "Inter", sans-serif';
+            ctx.fillText(`> ${index + 1}. ${nameStr}`, x + 12, rowY);
+        } else {
+            ctx.font = '600 13px "Inter", sans-serif';
+            ctx.fillText(`${index + 1}. ${nameStr}`, x + 16, rowY);
+        }
 
         // Progress Bar Background
         const barW = 80;
         const barX = x + boardW - barW - 16;
-        ctx.fillStyle = 'rgba(255,255,255,0.1)';
+        ctx.fillStyle = 'rgba(0,0,0,0.1)';
         ctx.beginPath();
-        ctx.roundRect(barX, rowY - 8, barW, 8, 4);
+        // ctx.roundRect(barX, rowY - 8, barW, 8, 4);
+        ctx.rect(barX, rowY - 8, barW, 8); // Sharp rects
         ctx.fill();
+        // Border for bar
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(barX, rowY - 8, barW, 8);
 
         // Progress Fill
         const progress = Math.min(p.x / MAP_LENGTH, 1);
-        ctx.fillStyle = p.finished ? '#ffd700' : (p.id === myId ? '#3d5afe' : '#ff7043');
+        ctx.fillStyle = p.finished ? '#ffd700' : (p.id === myId ? '#222' : '#ff7043'); // Self is dark, others orange/gold
         ctx.beginPath();
         // Clamped width
-        const fillW = Math.max(8, barW * progress);
-        ctx.roundRect(barX, rowY - 8, fillW, 8, 4);
-        ctx.fill();
+        const fillW = Math.max(0, barW * progress);
+        ctx.fillRect(barX, rowY - 8, fillW, 8);
     });
 
     ctx.restore();

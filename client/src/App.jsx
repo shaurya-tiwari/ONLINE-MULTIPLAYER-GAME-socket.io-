@@ -5,14 +5,19 @@ import LobbyScreen from './screens/LobbyScreen';
 import GameScreen from './screens/GameScreen';
 import pageBg from './assets/page/page.jpg';
 
-const socket = io(
-    import.meta.env.VITE_SERVER_URL ||
-    (window.location.hostname === "localhost" ? "http://localhost:3000" : undefined),
-    {
-        transports: ["websocket"],
-        reconnectionAttempts: 5
-    }
-);
+const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+const envUrl = import.meta.env.VITE_SERVER_URL;
+
+// On local, force localhost:3000. 
+// On prod, use envUrl if it's not localhost, otherwise auto-connect (undefined).
+const serverUrl = isLocal
+    ? "http://localhost:3000"
+    : (envUrl && !envUrl.includes("localhost") ? envUrl : undefined);
+
+const socket = io(serverUrl, {
+    transports: ["websocket"],
+    reconnectionAttempts: 5
+});
 
 function App() {
     const [screen, setScreen] = useState('home'); // home, lobby, game
