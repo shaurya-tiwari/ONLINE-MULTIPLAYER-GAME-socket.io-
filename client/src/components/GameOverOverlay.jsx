@@ -2,33 +2,43 @@ import React from 'react';
 
 const GameOverOverlay = ({ isHost, onRestart }) => {
     return (
-        <div className="absolute inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-500">
-            <div className="bg-gray-900/80 backdrop-blur-xl border border-white/10 p-8 rounded-3xl shadow-[0_0_50px_rgba(59,130,246,0.3)] text-center max-w-md w-full mx-4 transform transition-all animate-bounce-in">
+        <div className="absolute inset-0 z-[100] flex items-center justify-center bg-ink/80 animate-in fade-in duration-500 p-6">
+            <div className="card-paper rough-edge w-full max-w-md flex flex-col items-center gap-8 py-12 px-6 shadow-2xl animate-fade-in text-center">
 
-                <h2 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 mb-2 italic uppercase tracking-wider drop-shadow-lg">
-                    Race Finished
-                </h2>
+                <div className="flex flex-col items-center gap-2">
+                    <h2 className="text-4xl md:text-5xl font-black text-ink uppercase tracking-tighter italic">
+                        Race Finished
+                    </h2>
+                    <div className="h-1 w-24 bg-marker"></div>
+                </div>
 
-                <div className="h-1.5 w-24 bg-gradient-to-r from-blue-500 to-purple-500 mx-auto mb-8 rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]"></div>
-
-                <p className="text-gray-300 mb-8 text-lg font-medium">
-                    {isHost
-                        ? "You are the Host. Start a new race?"
-                        : "Waiting for Host to restart..."}
-                </p>
+                <div className="space-y-2">
+                    <p className="font-black text-xl uppercase tracking-tighter opacity-80">
+                        {isHost ? "RACE CONCLUDED" : "PODIUM SECURED"}
+                    </p>
+                    <p className="text-xs font-bold opacity-40 uppercase tracking-widest max-w-[200px] mx-auto">
+                        {isHost
+                            ? "You are the team captain. Would you like to restart the race?"
+                            : "Waiting for the team captain to signal the next start..."}
+                    </p>
+                </div>
 
                 {isHost && (
                     <button
                         onClick={onRestart}
-                        className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xl rounded-2xl shadow-lg shadow-blue-500/30 transform transition-all hover:scale-105 active:scale-95 border border-white/10"
+                        className="btn-ink w-full max-w-[240px] flex items-center justify-center gap-3 active:scale-95 transition-all py-3 text-xl"
                     >
-                        RESTART RACE ↻
+                        <span>READY UP</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-5 h-5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                        </svg>
                     </button>
                 )}
 
                 {!isHost && (
-                    <div className="flex justify-center">
-                        <div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-500/30 border-t-blue-500"></div>
+                    <div className="flex flex-col items-center gap-4">
+                        <div className="w-8 h-8 border-4 border-ink border-t-marker rounded-full animate-spin"></div>
+                        <span className="text-[10px] font-black uppercase tracking-[0.3em] opacity-40">Awaiting Signal</span>
                     </div>
                 )}
             </div>

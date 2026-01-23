@@ -408,131 +408,154 @@ const render = () => {
 };
 
 const renderGameOver = () => {
-    // Backdrop
-    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    gradient.addColorStop(0, 'rgba(20, 20, 30, 0.9)');
-    gradient.addColorStop(1, 'rgba(40, 40, 60, 0.95)');
-    ctx.fillStyle = gradient;
+    // Elegant Ink Overlay
+    ctx.fillStyle = 'rgba(10, 10, 10, 0.85)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     const cx = canvas.width / 2;
     const cy = canvas.height / 2;
 
+    // Premium Certificate Style for Game Over
+    const cardW = Math.min(canvas.width * 0.8, 500);
+    const cardH = 300;
+
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,0.3)';
+    ctx.shadowBlur = 40;
+
+    ctx.fillStyle = '#fcfcfc';
+    ctx.beginPath();
+    ctx.roundRect(cx - cardW / 2, cy - cardH / 2, cardW, cardH, 8);
+    ctx.fill();
+
+    // Border
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#000';
+    ctx.stroke();
+
+    ctx.restore();
+
     // Title
-    ctx.shadowColor = 'rgba(0,0,0,0.5)';
-    ctx.shadowBlur = 20;
-    ctx.shadowOffsetY = 10;
-    ctx.fillStyle = '#fff';
-    ctx.font = '900 64px "Inter", "Segoe UI", sans-serif';
+    ctx.fillStyle = '#0a0a0a';
+    ctx.font = 'black 48px "Inter", sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText("RACE FINISHED", cx, cy - 60);
 
-    ctx.shadowBlur = 0;
-    ctx.shadowOffsetY = 0;
+    // Dynamic marker line
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(cx - 100, cy - 45, 200, 4);
 
     // Button
-    const btnW = 260;
-    const btnH = 64;
+    const btnW = 200;
+    const btnH = 50;
     const btnX = cx - btnW / 2;
     const btnY = cy + 40;
 
-    // Pulse
-    const pulse = Math.sin(frameCount * 0.1) * 3;
+    // Hover-like scale effect based on frameCount
+    const s = 1 + Math.sin(frameCount * 0.1) * 0.02;
 
-    ctx.fillStyle = '#3d5afe'; // Primary Blue
+    ctx.save();
+    ctx.translate(cx, btnY + btnH / 2);
+    ctx.scale(s, s);
+    ctx.translate(-cx, -(btnY + btnH / 2));
+
+    ctx.fillStyle = '#0a0a0a';
     ctx.beginPath();
-    ctx.roundRect(btnX - pulse, btnY - pulse, btnW + pulse * 2, btnH + pulse * 2, 16);
+    ctx.roundRect(btnX, btnY, btnW, btnH, 4);
     ctx.fill();
 
-    // Text
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 24px "Inter", sans-serif';
-    ctx.fillText("PLAY AGAIN", cx, cy + 82);
+    // Button Text
+    ctx.fillStyle = '#fcfcfc';
+    ctx.font = 'black 16px "Inter", sans-serif';
+    ctx.textBaseline = 'middle';
+    ctx.fillText("READY UP", cx, btnY + btnH / 2);
+
+    ctx.restore();
 };
 
 const renderHUD = () => {
     // Dynamic responsive scaling based on canvas width
-    // Extra small for <= 400px screens
     const scale = canvas.width <= 400 ? 0.4 : canvas.width < 640 ? 0.65 : canvas.width < 1024 ? 0.85 : 1.0;
 
-    const padding = 20 * scale;
-    const boardW = 220 * scale;
-    // Move to Left side, below the "ROOM" badge (approx y=80)
-    const x = 20 * scale;
-    const y = 80 * scale;
+    const boardW = 200 * scale;
+    // Shifted to the right side with consistent padding
+    const x = canvas.width - boardW - (16 * scale);
+    const y = 16 * scale;
 
     const sortedPlayers = Object.values(users).sort((a, b) => b.x - a.x);
-    const boardH = (50 * scale) + (sortedPlayers.length * (36 * scale));
+    const boardH = (44 * scale) + (sortedPlayers.length * (32 * scale));
 
     ctx.save();
 
-    // Apply "Paper" Style: Rotation and Border
-    // We translate to center of board to rotate, then draw
-    const cx = x + boardW / 2;
-    const cy = y + boardH / 2;
+    // Premium Paper Card Style
+    ctx.shadowColor = 'rgba(0,0,0,0.1)';
+    ctx.shadowBlur = 10 * scale;
+    ctx.shadowOffsetY = 4 * scale;
 
-    ctx.translate(cx, cy);
-    ctx.rotate(-0.02); // Slight negative rotation like Room Badge (-1 deg approx)
-    ctx.translate(-cx, -cy);
-
-    // Background (White glass)
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-    ctx.backdropFilter = 'blur(4px)'; // Note: Canvas doesn't support backdropFilter directly, utilizing fill transparency
+    // Smooth rounded rect
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
     ctx.beginPath();
-    // ctx.roundRect(x, y, boardW, boardH, 2); // Less rounded, more paper-like
-    ctx.rect(x, y, boardW, boardH);
+    ctx.roundRect(x, y, boardW, boardH, 4 * scale);
     ctx.fill();
 
-    // Border (Dashed Black)
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = '#000';
-    ctx.setLineDash([8, 6]); // Dashed
-    ctx.stroke();
-    ctx.setLineDash([]); // Reset
+    ctx.shadowBlur = 0;
 
-    // Header
-    ctx.fillStyle = '#000'; // Black text
-    ctx.font = `bold ${16 * scale}px "Mono", monospace`; // Mono font to match
+    // Header Accent bar
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.roundRect(x, y, 4 * scale, boardH, { tl: 4 * scale, bl: 4 * scale });
+    ctx.fill();
+
+    // Header Text
+    ctx.fillStyle = '#111';
+    ctx.font = `black ${14 * scale}px "Inter", sans-serif`;
     ctx.textAlign = 'left';
-    ctx.fillText("LEADERBOARD", x + (16 * scale), y + (26 * scale));
+    ctx.fillText("STANDINGS", x + (16 * scale), y + (26 * scale));
 
     // Rows
-    ctx.font = `600 ${13 * scale}px "Inter", sans-serif`;
     sortedPlayers.forEach((p, index) => {
-        const rowY = y + (50 * scale) + (index * (36 * scale));
+        const rowY = y + (52 * scale) + (index * (32 * scale));
 
-        // Rank/Name
-        ctx.fillStyle = '#000'; // Black text
-        const nameStr = p.name.length > 10 ? p.name.substring(0, 9) + '..' : p.name;
-        // Highlight self?
+        // Background highlight for self
         if (p.id === myId) {
-            ctx.font = `bold ${13 * scale}px "Inter", sans-serif`;
-            ctx.fillText(`> ${index + 1}. ${nameStr}`, x + (12 * scale), rowY);
-        } else {
-            ctx.font = `600 ${13 * scale}px "Inter", sans-serif`;
-            ctx.fillText(`${index + 1}. ${nameStr}`, x + (16 * scale), rowY);
+            ctx.fillStyle = 'rgba(239, 68, 68, 0.05)';
+            ctx.fillRect(x + (6 * scale), rowY - (22 * scale), boardW - (12 * scale), 28 * scale);
         }
 
-        // Progress Bar Background
-        const barW = 80 * scale;
-        const barX = x + boardW - barW - (16 * scale);
-        ctx.fillStyle = 'rgba(0,0,0,0.1)';
-        ctx.beginPath();
-        // ctx.roundRect(barX, rowY - 8, barW, 8, 4);
-        ctx.rect(barX, rowY - (8 * scale), barW, 8 * scale); // Sharp rects
-        ctx.fill();
-        // Border for bar
-        ctx.strokeStyle = '#000';
-        ctx.lineWidth = 1 * scale;
-        ctx.strokeRect(barX, rowY - (8 * scale), barW, 8 * scale);
+        // Rank and Name
+        ctx.textAlign = 'left';
+        ctx.fillStyle = p.id === myId ? '#ef4444' : '#111';
+        ctx.font = `${p.id === myId ? 'bold' : '500'} ${12 * scale}px "Inter", sans-serif`;
 
-        // Progress Fill
-        const progress = Math.min(p.x / MAP_LENGTH, 1);
-        ctx.fillStyle = p.finished ? '#ffd700' : (p.id === myId ? '#222' : '#ff7043'); // Self is dark, others orange/gold
+        const rankStr = `${index + 1}.`;
+        const nameStr = p.name.length > 10 ? p.name.substring(0, 8) + '..' : p.name;
+
+        ctx.fillText(rankStr, x + (16 * scale), rowY);
+        ctx.fillText(nameStr.toUpperCase(), x + (40 * scale), rowY);
+
+        // Progress Pill
+        const barW = 60 * scale;
+        const barH = 6 * scale;
+        const barX = x + boardW - barW - (16 * scale);
+
+        // Track
+        ctx.fillStyle = 'rgba(0,0,0,0.05)';
         ctx.beginPath();
-        // Clamped width
+        ctx.roundRect(barX, rowY - (6 * scale), barW, barH, barH / 2);
+        ctx.fill();
+
+        // Progress
+        const progress = Math.min(p.x / MAP_LENGTH, 1);
         const fillW = Math.max(0, barW * progress);
-        ctx.fillRect(barX, rowY - (8 * scale), fillW, 8 * scale);
+
+        const gradient = ctx.createLinearGradient(barX, 0, barX + fillW, 0);
+        gradient.addColorStop(0, p.id === myId ? '#ef4444' : '#111');
+        gradient.addColorStop(1, p.id === myId ? '#f87171' : '#333');
+
+        ctx.fillStyle = p.finished ? '#ffd700' : gradient;
+        ctx.beginPath();
+        ctx.roundRect(barX, rowY - (6 * scale), fillW, barH, barH / 2);
+        ctx.fill();
     });
 
     ctx.restore();

@@ -2,10 +2,56 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+    --ink: #0a0a0a;
+    --paper: #fcfcfc;
+    --marker: #ef4444;
+}
+
 body {
     margin: 0;
     overflow: hidden;
-    background-color: #1a1a1a;
-    color: white;
-    font-family: 'Inter', sans-serif;
+    background-color: #f0f0f0;
+    color: var(--ink);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    width: 100vw;
+    height: 100vh;
+    position: fixed;
+}
+
+@layer components {
+    .btn-ink {
+        @apply w-full py-4 text-2xl font-black border-2 border-sketch-border rounded-lg hover:bg-ink hover:text-paper transition-all transform hover:-translate-y-1 active:translate-y-0 uppercase tracking-widest;
+        box-shadow: 4px 4px 0px 0px rgba(0, 0, 0, 0.1);
+    }
+
+    .card-paper {
+        @apply bg-paper border-2 border-sketch-border p-8 relative;
+        box-shadow: 8px 8px 0px 0px rgba(0, 0, 0, 0.05);
+    }
+}
+
+@layer utilities {
+    .rough-edge {
+        clip-path: polygon(0.5% 1.5%, 1.2% 0.5%, 98.8% 0.8%, 99.5% 2.3%,
+                99.2% 97.5%, 98.1% 99.1%, 1.9% 98.6%, 0.6% 97.4%);
+    }
+
+    .animate-float {
+        animation: float 6s ease-in-out infinite;
+    }
+
+    @keyframes float {
+        0% {
+            transform: translateY(0px) rotate(-1deg);
+        }
+
+        50% {
+            transform: translateY(-10px) rotate(1deg);
+        }
+
+        100% {
+            transform: translateY(0px) rotate(-1deg);
+        }
+    }
 }

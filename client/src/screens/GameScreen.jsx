@@ -77,16 +77,24 @@ const GameScreen = ({ socket, roomCode, playerId, players, gameMap }) => {
                 <canvas ref={canvasRef} className="block w-full h-full object-contain relative z-10" />
 
                 {/* HUD Layer */}
-                <div className="absolute top-2 left-2 sm:top-4 sm:left-4 pointer-events-none z-10 flex flex-wrap gap-2 items-start">
-                    <span className="text-black max-[400px]:text-[0.5rem] text-xs sm:text-sm md:text-base lg:text-xl font-bold font-mono max-[400px]:px-0.5 max-[400px]:py-0 px-1 py-0.5 sm:px-2 sm:py-1 border-2 max-[400px]:border border-black border-dashed transform -rotate-1 bg-white/50 backdrop-blur-sm">ROOM: {roomCode}</span>
+                <div className="absolute top-4 left-4 pointer-events-none z-20 flex flex-wrap gap-3 items-start">
+                    {/* Room Identity Badge */}
+                    <div className="pointer-events-auto flex flex-col items-center transform -rotate-1">
+                        <span className="bg-ink text-paper text-[10px] sm:text-xs font-black px-2 py-0.5 rounded-t-sm uppercase tracking-widest leading-none">
+                            Room ID
+                        </span>
+                        <span className="bg-white border-2 border-ink text-ink font-black text-xs sm:text-sm md:text-xl px-3 py-1 sm:px-4 sm:py-2 rounded-b-sm shadow-sm">
+                            {roomCode}
+                        </span>
+                    </div>
 
                     {isHost && (
                         <button
                             onClick={handleRestart}
-                            className="pointer-events-auto bg-white hover:bg-gray-50 text-black max-[400px]:text-[0.5rem] text-xs sm:text-sm md:text-base lg:text-xl border-2 max-[400px]:border border-black border-dashed font-bold font-mono max-[400px]:px-0.5 max-[400px]:py-0 px-1 py-0.5 sm:px-2 sm:py-1 transform -rotate-1 flex items-center max-[400px]:gap-0.5 gap-1 sm:gap-2 transition-transform hover:scale-105 active:scale-95"
+                            className="pointer-events-auto bg-marker hover:bg-red-600 text-white font-black text-xs sm:text-sm md:text-lg px-3 py-2 sm:px-5 sm:py-3 rounded-lg shadow-sm transform hover:-translate-y-1 active:translate-y-0 transition-all uppercase tracking-widest flex items-center gap-2"
                         >
-                            <span>RESTART</span>
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="max-[400px]:w-2 max-[400px]:h-2 w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5">
+                            <span className="hidden sm:inline">RESTART</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-4 h-4 sm:w-5 sm:h-5">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
                             </svg>
                         </button>
