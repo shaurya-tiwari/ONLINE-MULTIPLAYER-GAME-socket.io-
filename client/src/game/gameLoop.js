@@ -2,6 +2,7 @@ import { updatePlayerPhysics, createPlayerState } from './physics';
 import { handleCollisions } from './collisions';
 import { drawStickman } from './animations';
 import { getAsset } from './AssetLoader';
+import { getFinishLinePosition } from '../constants/raceLength';
 
 let animationFrameId;
 let ctx;
@@ -19,8 +20,7 @@ let socketRef;
 let roomCodeRef;
 let frameCount = 0;
 let onGameOverCallback;
-
-const MAP_LENGTH = 5000; // As defined in generator
+let MAP_LENGTH = 5000; // Will be set dynamically
 
 const handleKeyDown = (e) => {
     switch (e.code) {
@@ -58,7 +58,7 @@ const handleKeyUp = (e) => {
     }
 };
 
-export const startGameLoop = (canvasElem, socket, playerId, players, gameMap, roomCode, onGameOver) => {
+export const startGameLoop = (canvasElem, socket, playerId, players, gameMap, roomCode, onGameOver, raceLengthLabel) => {
     canvas = canvasElem;
     ctx = canvas.getContext('2d');
     myId = playerId;
@@ -67,6 +67,9 @@ export const startGameLoop = (canvasElem, socket, playerId, players, gameMap, ro
     roomCodeRef = roomCode;
     frameCount = 0;
     onGameOverCallback = onGameOver;
+
+    // Set dynamic Map Length based on room selection
+    MAP_LENGTH = getFinishLinePosition(raceLengthLabel);
 
     // Reset inputs to prevent auto-running if key was held during reset
     inputs = { right: false, jump: false, slide: false };

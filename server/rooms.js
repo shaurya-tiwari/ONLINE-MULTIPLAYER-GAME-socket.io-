@@ -9,11 +9,12 @@ const generateRoomCode = () => {
     return result;
 };
 
-const createRoom = (hostId, hostName) => {
+const createRoom = (hostId, hostName, raceLength = '500m') => {
     const code = generateRoomCode();
     rooms[code] = {
         code,
         host: hostId,
+        raceLength,
         players: {
             [hostId]: {
                 id: hostId,

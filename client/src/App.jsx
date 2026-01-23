@@ -25,7 +25,8 @@ function App() {
     const [roomCode, setRoomCode] = useState('');
     const [players, setPlayers] = useState({});
     const [isHost, setIsHost] = useState(false);
-    const [gameMap, setGameMap] = useState(null); // [NEW] Map state
+    const [gameMap, setGameMap] = useState(null);
+    const [raceLength, setRaceLength] = useState('500m');
 
     // Use refs for stable access inside listeners
     const playerNameRef = React.useRef(playerName);
@@ -36,9 +37,10 @@ function App() {
             console.log("Connected to server:", socket.id);
         };
 
-        const onRoomCreated = ({ code }) => {
-            console.log("Room Created:", code);
+        const onRoomCreated = ({ code, raceLength: serverLength }) => {
+            console.log("Room Created:", code, serverLength);
             setRoomCode(code);
+            if (serverLength) setRaceLength(serverLength);
             setScreen('lobby');
             setIsHost(true);
             setPlayers({
@@ -46,22 +48,25 @@ function App() {
             });
         };
 
-        const onUpdateRoom = ({ players, code }) => {
-            console.log("Room Updated:", players);
+        const onUpdateRoom = ({ players, code, raceLength: serverLength }) => {
+            console.log("Room Updated:", players, serverLength);
             setPlayers(players);
             setRoomCode(code);
+            if (serverLength) setRaceLength(serverLength);
             setScreen('lobby');
         };
 
-        const onGameStarted = ({ gameMap }) => {
+        const onGameStarted = ({ gameMap, raceLength: serverLength }) => {
             console.log("Game Started! Map received.");
             setGameMap(gameMap);
+            if (serverLength) setRaceLength(serverLength);
             setScreen('game');
         };
 
-        const onGameRestarted = ({ gameMap }) => {
+        const onGameRestarted = ({ gameMap, raceLength: serverLength }) => {
             console.log("Game Restarted!");
             setGameMap(gameMap);
+            if (serverLength) setRaceLength(serverLength);
         };
 
         const onError = ({ message }) => {
@@ -85,9 +90,10 @@ function App() {
         };
     }, []); // Empty dependency array = stable listeners
 
-    const handleStartHost = (name) => {
+    const handleStartHost = (name, length) => {
         setPlayerName(name);
-        socket.emit('create_room', { name });
+        setRaceLength(length);
+        socket.emit('create_room', { name, raceLength: length });
     };
 
     const handleJoinGame = (name, code) => {
@@ -122,6 +128,7 @@ function App() {
                     roomCode={roomCode}
                     players={players}
                     isHost={isHost}
+                    raceLength={raceLength}
                     onInvite={() => { }}
                     onStartGame={handleStartRace}
                 />
@@ -133,7 +140,8 @@ function App() {
                     roomCode={roomCode}
                     playerId={socket.id}
                     players={players}
-                    gameMap={gameMap} // [NEW] Pass map to GameScreen
+                    gameMap={gameMap}
+                    raceLength={raceLength}
                 />
             )}
         </div>

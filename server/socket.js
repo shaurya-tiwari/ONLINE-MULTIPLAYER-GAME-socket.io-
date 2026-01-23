@@ -1,15 +1,20 @@
 const { createRoom, joinRoom, getRoom } = require('./rooms');
 const { generateTrack } = require('./mapGenerator');
+const { validateRaceLength, getFinishLinePosition } = require('./raceLength');
 
 module.exports = (io) => {
     io.on('connection', (socket) => {
         console.log(`User Connected: ${socket.id}`);
 
         socket.on('create_room', (data) => {
-            const roomCode = createRoom(socket.id, data.name);
+            const lengthLabel = validateRaceLength(data.raceLength);
+            const roomCode = createRoom(socket.id, data.name, lengthLabel);
             socket.join(roomCode);
-            socket.emit('room_created', { code: roomCode });
-            console.log(`Room ${roomCode} created by ${data.name}`);
+            socket.emit('room_created', {
+                code: roomCode,
+                raceLength: lengthLabel
+            });
+            console.log(`Room ${roomCode} created by ${data.name} with length ${lengthLabel}`);
         });
 
         socket.on('join_room', (data) => {
@@ -23,7 +28,8 @@ module.exports = (io) => {
                 // Notify everyone in the room (including sender) about the new state
                 io.to(code).emit('update_room', {
                     players: result.room.players,
-                    code: code
+                    code: code,
+                    raceLength: result.room.raceLength
                 });
                 console.log(`${name} joined room ${code}`);
             }
@@ -34,14 +40,19 @@ module.exports = (io) => {
             if (room) {
                 // Ensure the starter (Host) is actually in the socket room (fix for reconnects)
                 socket.join(code);
+
+                // Get finish line position based on selected length
+                const pixelLength = getFinishLinePosition(room.raceLength);
+
                 // Generate consistent map for everyone
-                const gameMap = generateTrack(5000); // 5000px length for now
+                const gameMap = generateTrack(pixelLength);
                 room.gameState = 'racing';
 
                 io.to(code).emit('game_started', {
-                    gameMap: gameMap
+                    gameMap: gameMap,
+                    raceLength: room.raceLength
                 });
-                console.log(`Game started in room ${code} with map`);
+                console.log(`Game started in room ${code} with length ${room.raceLength}`);
             }
         });
 
@@ -66,12 +77,14 @@ module.exports = (io) => {
                 });
 
                 // Generate New Map
-                const gameMap = generateTrack(5000);
+                const pixelLength = getFinishLinePosition(room.raceLength);
+                const gameMap = generateTrack(pixelLength);
 
                 io.to(code).emit('game_restarted', {
-                    gameMap: gameMap
+                    gameMap: gameMap,
+                    raceLength: room.raceLength
                 });
-                console.log(`Game restarted in room ${code}`);
+                console.log(`Game restarted in room ${code} with length ${room.raceLength}`);
             }
         });
 

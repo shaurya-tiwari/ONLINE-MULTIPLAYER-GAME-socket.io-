@@ -5,9 +5,11 @@ const LobbyScreen = ({
     players,
     onInvite,
     onStartGame,
-    isHost
+    isHost,
+    raceLength
 }) => {
     const playerList = Object.values(players || {});
+    const hostPlayer = playerList.find(p => p.isHost);
     const [copied, setCopied] = useState(false);
 
     // Changed: Added max-h-screen and overflow handling to outer card
@@ -25,13 +27,24 @@ const LobbyScreen = ({
         <div className="w-full h-full flex items-center justify-center p-4 md:p-6 bg-transparent overflow-hidden">
             <div className={cardStyle}>
 
+                {/* Room Details Badge */}
+                <div className="w-full flex justify-between items-start gap-2 mb-2">
+                    <div className="flex flex-col items-start">
+                        <span className="text-[8px] font-black text-marker uppercase tracking-widest">Distance</span>
+                        <span className="text-sm font-black text-ink">{raceLength || '500m'}</span>
+                    </div>
+                    <div className="flex flex-col items-center flex-grow">
+                        <span className="text-[8px] font-black text-marker uppercase tracking-widest">Room Code</span>
+                        <span onClick={handleCopy} className="text-xl font-black text-ink cursor-pointer hover:text-marker transition-colors">{roomCode}</span>
+                    </div>
+                    <div className="flex flex-col items-end">
+                        <span className="text-[8px] font-black text-marker uppercase tracking-widest">Captain</span>
+                        <span className="text-sm font-black text-ink truncate max-w-[80px]">{hostPlayer?.name || '...'}</span>
+                    </div>
+                </div>
+
                 {/* Room Code Section - Compact on small screens */}
                 <div className="w-full text-center flex flex-col items-center gap-1 md:gap-2 shrink-0">
-                    <div className="flex flex-col items-center">
-                        <h2 className="text-[10px] md:text-xs font-black text-marker uppercase tracking-widest mb-0.5">Room Identity</h2>
-                        <div className="h-1 w-8 md:w-12 bg-marker mb-1 md:mb-2"></div>
-                    </div>
-
                     <div
                         onClick={handleCopy}
                         className="group relative cursor-pointer"
@@ -42,9 +55,6 @@ const LobbyScreen = ({
                         <div className={`absolute -top-6 md:-top-8 left-1/2 -translate-x-1/2 bg-ink text-paper text-[10px] px-2 py-1 rounded transition-opacity ${copied ? 'opacity-100' : 'opacity-0'}`}>
                             COPIED!
                         </div>
-                        <p className="text-[10px] font-bold opacity-30 mt-0.5 md:mt-1 uppercase tracking-[0.2em] group-hover:opacity-60 transition-opacity">
-                            Click code to copy
-                        </p>
                     </div>
                 </div>
 

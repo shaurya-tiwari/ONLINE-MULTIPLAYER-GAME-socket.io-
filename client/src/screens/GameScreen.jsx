@@ -4,14 +4,14 @@ import MobileControls from '../components/MobileControls';
 import GameOverOverlay from '../components/GameOverOverlay';
 import CanvasCover from '../components/CanvasCover';
 
-const GameScreen = ({ socket, roomCode, playerId, players, gameMap }) => {
+const GameScreen = ({ socket, roomCode, playerId, players, gameMap, raceLength }) => {
     const canvasRef = useRef(null);
     const [showGameOver, setShowGameOver] = useState(false);
     const [winnerName, setWinnerName] = useState(null);
 
     const isHost = players[playerId]?.isHost;
 
-    console.log("GameScreen Render:", { playerId, isHost, players });
+    console.log("GameScreen Render:", { playerId, isHost, players, raceLength });
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -47,7 +47,7 @@ const GameScreen = ({ socket, roomCode, playerId, players, gameMap }) => {
 
         // Initialize Game Loop with Map
         try {
-            startGameLoop(canvas, socket, playerId, players, gameMap, roomCode, onGameOver);
+            startGameLoop(canvas, socket, playerId, players, gameMap, roomCode, onGameOver, raceLength);
         } catch (err) {
             console.error("Failed to start game loop:", err);
         }
@@ -73,7 +73,7 @@ const GameScreen = ({ socket, roomCode, playerId, players, gameMap }) => {
             resizeObserver.disconnect();
             socket.off('game_over', handleGameOver);
         };
-    }, [socket, playerId, players, gameMap, roomCode]);
+    }, [socket, playerId, players, gameMap, roomCode, raceLength]);
 
     const handleRestart = () => {
         socket.emit('restart_game', { code: roomCode });

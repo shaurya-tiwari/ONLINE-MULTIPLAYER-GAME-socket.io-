@@ -4,6 +4,7 @@ const HomeScreen = ({ onHost, onJoin }) => {
     const [view, setView] = useState('menu'); // menu, host, join
     const [name, setName] = useState('');
     const [code, setCode] = useState('');
+    const [raceLength, setRaceLength] = useState('500m');
 
     const titleStyle = "text-5xl md:text-7xl lg:text-8xl font-black mb-8 md:mb-12 tracking-tighter animate-float text-black drop-shadow-lg leading-none";
     const cardStyle = "card-paper rough-edge w-full max-w-md flex flex-col gap-4 md:gap-6 items-center animate-fade-in py-6 md:py-8";
@@ -38,10 +39,25 @@ const HomeScreen = ({ onHost, onJoin }) => {
                 maxLength={12}
             />
 
+            <div className="w-full space-y-2 mt-4">
+                <p className="text-[10px] font-black uppercase tracking-widest opacity-40 text-center">Select Race Length</p>
+                <div className="flex gap-2 justify-center">
+                    {['500m', '1500m', '3000m'].map(len => (
+                        <button
+                            key={len}
+                            onClick={() => setRaceLength(len)}
+                            className={`px-3 py-2 border-2 font-black text-xs transition-all ${raceLength === len ? 'bg-ink text-paper border-ink' : 'border-gray-200 opacity-60'}`}
+                        >
+                            {len}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
             <button
-                onClick={() => name && onHost(name)}
+                onClick={() => name && onHost(name, raceLength)}
                 disabled={!name}
-                className={`${primaryButtonStyle} ${!name ? 'opacity-20 grayscale pointer-events-none' : ''}`}
+                className={`${primaryButtonStyle} mt-4 ${!name ? 'opacity-20 grayscale pointer-events-none' : ''}`}
             >
                 CREATE
             </button>
