@@ -7,6 +7,7 @@ import CanvasCover from '../components/CanvasCover';
 const GameScreen = ({ socket, roomCode, playerId, players, gameMap }) => {
     const canvasRef = useRef(null);
     const [showGameOver, setShowGameOver] = useState(false);
+    const [winnerName, setWinnerName] = useState(null);
 
     const isHost = players[playerId]?.isHost;
 
@@ -18,10 +19,20 @@ const GameScreen = ({ socket, roomCode, playerId, players, gameMap }) => {
 
         // Reset overlay when map changes (restart)
         setShowGameOver(false);
+        setWinnerName(null);
 
-        // Callback when local player finishes
-        const onGameOver = () => {
+        // Listen for global game over
+        const handleGameOver = ({ winner }) => {
+            setWinnerName(winner);
             setShowGameOver(true);
+            stopGameLoop(); // Freeze the game
+        };
+
+        socket.on('game_over', handleGameOver);
+
+        // Callback when local player finishes - only local effect removed, driving via socket now
+        const onGameOver = () => {
+            // Local fallback or ignored, logic moved to socket
         };
 
         // Set initial canvas dimensions based on parent
@@ -60,6 +71,7 @@ const GameScreen = ({ socket, roomCode, playerId, players, gameMap }) => {
         return () => {
             stopGameLoop();
             resizeObserver.disconnect();
+            socket.off('game_over', handleGameOver);
         };
     }, [socket, playerId, players, gameMap, roomCode]);
 
@@ -106,6 +118,7 @@ const GameScreen = ({ socket, roomCode, playerId, players, gameMap }) => {
                     <GameOverOverlay
                         isHost={isHost}
                         onRestart={handleRestart}
+                        winnerName={winnerName}
                     />
                 )}
             </div>

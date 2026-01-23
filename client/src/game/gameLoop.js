@@ -68,6 +68,9 @@ export const startGameLoop = (canvasElem, socket, playerId, players, gameMap, ro
     frameCount = 0;
     onGameOverCallback = onGameOver;
 
+    // Reset inputs to prevent auto-running if key was held during reset
+    inputs = { right: false, jump: false, slide: false };
+
     users = {};
     Object.values(players).forEach(p => {
         users[p.id] = createPlayerState(p.id, p.name);
@@ -151,8 +154,11 @@ const update = () => {
         player.state = 'idle'; // Stop moving
         if (!player.finished) {
             player.finished = true;
-            if (typeof onGameOver === 'function') {
-                onGameOver();
+            if (socketRef && roomCodeRef) {
+                socketRef.emit('player_won', {
+                    code: roomCodeRef,
+                    name: player.name
+                });
             }
         }
     } else {
@@ -402,9 +408,7 @@ const render = () => {
     // 5. HUD - Screen Space
     renderHUD();
 
-    if (users[myId] && users[myId].finished) {
-        renderGameOver();
-    }
+    // Removed renderGameOver() as we are using React Overlay now
 };
 
 const renderGameOver = () => {

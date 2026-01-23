@@ -51,6 +51,12 @@ module.exports = (io) => {
             socket.to(code).emit('player_updated', playerState);
         });
 
+        socket.on('player_won', ({ code, name }) => {
+            // Broadcast to EVERYONE in the room (including sender) that game is over
+            io.to(code).emit('game_over', { winner: name });
+            console.log(`Player ${name} won in room ${code}`);
+        });
+
         socket.on('restart_game', ({ code }) => {
             const room = getRoom(code);
             if (room) {
