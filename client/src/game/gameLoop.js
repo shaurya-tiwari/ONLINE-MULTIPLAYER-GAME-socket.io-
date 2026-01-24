@@ -394,12 +394,15 @@ const render = (dt) => {
 
     ctx.save();
     const BASE_HEIGHT = 600; const BASE_WIDTH = 1000;
-    const scaleFactorHeight = canvas.height / BASE_HEIGHT;
-    const scaleFactorWidth = canvas.width / BASE_WIDTH;
-    const baseScale = Math.max(0.2, Math.min(scaleFactorHeight, scaleFactorWidth * 1.5));
+    // Calculate scale to best fit the screen width, with a minimum to prevent too tiny rendering
+    const baseScale = Math.max(0.4, canvas.width / BASE_WIDTH);
+
+    // Position Ground (500) at 65% of screen height
+    const desiredGroundY = canvas.height * 0.65;
+    const verticalOffset = (desiredGroundY / baseScale) - 500;
 
     ctx.scale(baseScale * currentZoom, baseScale * currentZoom);
-    ctx.translate(-cameraX + shake.x, shake.y);
+    ctx.translate(-cameraX + shake.x, verticalOffset + shake.y);
 
     drawWorldEffects(ctx);
 

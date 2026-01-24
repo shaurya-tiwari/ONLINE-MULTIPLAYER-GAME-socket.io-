@@ -21,17 +21,17 @@ const MobileControls = () => {
     };
 
     // Sketch themed Button Styles
-    const btnBase = "flex items-center justify-center text-ink font-black transition-all active:scale-90 select-none touch-none shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] border-4 border-ink rough-edge bg-paper hover:bg-ink hover:text-paper";
+    const btnBase = "flex items-center justify-center text-black/40 font-black transition-all active:scale-90 select-none touch-none border border-black/5 rounded-full bg-neutral-500/10 hover:bg-neutral-500/20 pointer-events-auto";
 
-    // Run Button (Large, Left)
-    const runBtn = `${btnBase} w-32 h-32 text-2xl rotate-[-2deg]`;
+    // Run Button (Small/Medium, Left)
+    const runBtn = `${btnBase} w-24 h-24 text-xl rotate-[-2deg]`;
 
     // Action Buttons (Right) - Vertical Column
-    const jumpBtn = `${btnBase} w-28 h-28 text-xl rotate-[3deg] border-marker text-marker hover:bg-marker hover:text-paper`;
-    const slideBtn = `${btnBase} w-28 h-28 text-xl rotate-[-1deg] border-[#3b82f6] text-[#3b82f6] hover:bg-[#3b82f6] hover:text-paper`;
+    const jumpBtn = `${btnBase} w-20 h-20 text-lg rotate-[3deg] border-red-500/10 text-red-600/50 hover:bg-red-500/20`;
+    const slideBtn = `${btnBase} w-20 h-20 text-lg rotate-[-1deg] border-blue-500/10 text-blue-600/50 hover:bg-blue-500/20`;
 
     return (
-        <div className="w-full h-full flex justify-between items-end px-10 pb-[max(2rem,env(safe-area-inset-bottom))]">
+        <div className="w-full h-full flex justify-between items-end px-6 pb-[max(1rem,env(safe-area-inset-bottom))] pointer-events-none">
             <div className="flex items-center">
                 <button
                     className={runBtn}
