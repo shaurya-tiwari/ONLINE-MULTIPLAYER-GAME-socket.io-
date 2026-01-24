@@ -42,7 +42,12 @@ const generateTrack = (length = 5000) => {
             if (gapTypeRoll > 0.6) type = TYPE_GAP_ROPE;
             if (gapTypeRoll > 0.9) type = TYPE_GAP_BRIDGE;
 
-            const gapWidth = 150 + Math.random() * 150;
+            // 1 out of 3 gaps should be "Mega" (impossible jump)
+            const isMegaGap = Math.random() < 0.33;
+            const gapWidth = isMegaGap
+                ? 450 + Math.random() * 200  // Mega Gap (450px - 650px)
+                : 150 + Math.random() * 100; // Normal Gap (150px - 250px)
+
             const gapX = Math.floor(x);
 
             // Logic placeholder: y=500 for ground level break

@@ -13,7 +13,7 @@ import { checkRoadBreakTraversed } from '../game-features/roadBreak/roadBreakLog
 export const PHYSICS_CONSTANTS = {
     GRAVITY: 0.8,
     JUMP_FORCE: -15,
-    RUN_SPEED: 5,
+    RUN_SPEED: 3.5,
     GROUND_Y: 500,
     PLAYER_HEIGHT_STANDING: 60,
     PLAYER_HEIGHT_SLIDING: 30,

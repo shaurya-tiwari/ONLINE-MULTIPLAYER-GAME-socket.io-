@@ -8,7 +8,7 @@ import { getAsset } from './AssetLoader';
 export const drawRunStickman = (ctx, x, y, width, height, frameCount) => {
     // Distance (in pixels) the player must travel to advance one animation frame
     // 20-25 usually feels good for this character size
-    const distancePerFrame = 18;
+    const distancePerFrame = 8;
 
     // Use absolute x position to determine the frame
     // This makes the animation independent of FPS and perfectly synced with ground
