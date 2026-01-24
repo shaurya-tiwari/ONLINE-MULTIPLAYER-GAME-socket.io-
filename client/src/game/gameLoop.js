@@ -424,11 +424,23 @@ const render = (dt) => {
     ctx.stroke();
 
     // 3. FINISH LINE
-    ctx.fillStyle = '#222';
-    for (let i = 0; i < 4; i++) { ctx.fillRect(MAP_LENGTH, groundY - 300 + (i * 75), 10, 37.5); }
-    ctx.lineWidth = 2; ctx.strokeStyle = '#222'; ctx.strokeRect(MAP_LENGTH, groundY - 300, 10, 300);
-    ctx.fillStyle = '#ef5350'; ctx.beginPath(); ctx.moveTo(MAP_LENGTH, groundY - 300); ctx.lineTo(MAP_LENGTH - 100, groundY - 275); ctx.lineTo(MAP_LENGTH, groundY - 250); ctx.fill();
-    ctx.fillStyle = '#222'; ctx.font = '900 32px "Inter", sans-serif'; ctx.fillText("FINISH", MAP_LENGTH + 20, groundY - 150);
+    const finishImg = getAsset('finish', 0);
+    if (finishImg) {
+        // Draw image anchored at bottom (groundY) and centered or aligned with MAP_LENGTH
+        // Scaling to a reasonable height (e.g. 300px matchine old flag)
+        const targetHeight = 300;
+        const scale = targetHeight / finishImg.height;
+        const targetWidth = finishImg.width * scale;
+
+        ctx.drawImage(finishImg, MAP_LENGTH - targetWidth / 2, groundY - targetHeight, targetWidth, targetHeight);
+    } else {
+        // Fallback if image not ready (though it should be preloaded)
+        ctx.fillStyle = '#222';
+        for (let i = 0; i < 4; i++) { ctx.fillRect(MAP_LENGTH, groundY - 300 + (i * 75), 10, 37.5); }
+        ctx.lineWidth = 2; ctx.strokeStyle = '#222'; ctx.strokeRect(MAP_LENGTH, groundY - 300, 10, 300);
+        ctx.fillStyle = '#ef5350'; ctx.beginPath(); ctx.moveTo(MAP_LENGTH, groundY - 300); ctx.lineTo(MAP_LENGTH - 100, groundY - 275); ctx.lineTo(MAP_LENGTH, groundY - 250); ctx.fill();
+        ctx.fillStyle = '#222'; ctx.font = '900 32px "Inter", sans-serif'; ctx.fillText("FINISH", MAP_LENGTH + 20, groundY - 150);
+    }
 
     // DSA: RENDER ITERATION (Data Oriented)
     if (mapData) {

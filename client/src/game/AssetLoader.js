@@ -11,6 +11,7 @@ const airObImages = import.meta.glob('../assets/obstacles/air/*.{png,jpg,jpeg,sv
 const jumpImagesGlob = import.meta.glob('../assets/jump images/*.{png,jpg,jpeg,svg}', { eager: true });
 const runImagesGlob = import.meta.glob('../assets/run/*.{png,jpg,jpeg,svg}', { eager: true });
 const slideImagesGlob = import.meta.glob('../assets/slide/*.{png,jpg,jpeg,svg}', { eager: true });
+const finishImagesGlob = import.meta.glob('../assets/finish/*.{png,jpg,jpeg,svg}', { eager: true });
 
 // Background & Specials
 import stickmanStillSrc from '../assets/stickman/stickmanStill.png';
@@ -37,6 +38,7 @@ const assetCategories = {
     jump: getModules(jumpImagesGlob),
     run: getModules(runImagesGlob),
     slide: getModules(slideImagesGlob),
+    finish: getModules(finishImagesGlob),
     single: {
         stickmanStill: stickmanStillSrc,
         stickmanGif: stickmanGifSrc,
