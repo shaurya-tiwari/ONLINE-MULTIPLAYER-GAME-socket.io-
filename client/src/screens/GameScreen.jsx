@@ -80,23 +80,26 @@ const GameScreen = ({ socket, roomCode, playerId, players, gameMap, raceLength }
     };
 
     return (
-        <div className="w-full h-full flex flex-col items-center justify-start bg-transparent overflow-hidden relative pt-12 md:justify-center md:pt-0">
-            {/* Main Game Container - Fixed Aspect Ratio Box */}
-            <div className="relative w-full max-w-6xl aspect-video bg-transparent shadow-none overflow-hidden shrink-0 border-2 border-black/50">
+        <div className="w-full h-full min-h-screen flex flex-col items-center justify-center p-4 md:p-8 bg-transparent overflow-hidden relative">
+            {/* Main Game Container - Fixed Aspect Ratio Box with framing */}
+            <div className="relative w-full max-w-6xl aspect-video bg-transparent shadow-[10px_10px_0px_0px_rgba(0,0,0,0.05)] overflow-hidden shrink-0 border-4 border-ink rough-edge">
                 {/* Canvas Cover (Grass Overlay) - Behind Canvas */}
                 <CanvasCover />
 
                 <canvas ref={canvasRef} className="block w-full h-full object-contain relative z-10" />
 
                 {/* HUD Layer - Using safe area padding */}
-                <div className="absolute left-4 z-20 flex flex-wrap gap-3 items-start pointer-events-none"
-                    style={{ top: 'max(1rem, env(safe-area-inset-top))', left: 'max(1rem, env(safe-area-inset-left))' }}>
+                <div className="absolute z-20 flex flex-wrap gap-3 items-start pointer-events-none"
+                    style={{
+                        top: 'clamp(0.5rem, 3%, 2rem)',
+                        left: 'clamp(0.5rem, 3%, 2rem)'
+                    }}>
                     {/* Room Identity Badge */}
                     <div className="pointer-events-auto flex flex-col items-center transform -rotate-1">
-                        <span className="bg-ink text-paper text-[10px] sm:text-xs font-black px-2 py-0.5 rounded-t-sm uppercase tracking-widest leading-none">
+                        <span className="bg-ink text-paper text-[8px] sm:text-[10px] font-black px-2 py-0.5 rounded-t-sm uppercase tracking-widest leading-none">
                             Room ID
                         </span>
-                        <span className="bg-white border-2 border-ink text-ink font-black text-xs sm:text-sm md:text-xl px-3 py-1 sm:px-4 sm:py-2 rounded-b-sm shadow-sm">
+                        <span className="bg-white border-2 border-ink text-ink font-black text-xs sm:text-base md:text-xl px-2 py-1 sm:px-4 sm:py-2 rounded-b-sm shadow-sm">
                             {roomCode}
                         </span>
                     </div>
@@ -126,7 +129,7 @@ const GameScreen = ({ socket, roomCode, playerId, players, gameMap, raceLength }
 
             {/* Controls Area - Mobile Only, positioned for comfort */}
             {/* Hidden on md (768px+), visible on smaller screens */}
-            <div className="w-full h-auto mt-6 px-4 pb-8 md:hidden shrink-0 z-20 pointer-events-auto flex justify-center">
+            <div className="w-full h-auto mt-4 px-4 pb-4 md:hidden shrink-0 z-20 pointer-events-auto flex justify-center">
                 <MobileControls />
             </div>
         </div>

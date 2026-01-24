@@ -9,12 +9,19 @@ module.exports = (io) => {
         socket.on('create_room', (data) => {
             const lengthLabel = validateRaceLength(data.raceLength);
             const roomCode = createRoom(socket.id, data.name, lengthLabel);
+
+            // Explicitly join the room
             socket.join(roomCode);
+
+            const room = getRoom(roomCode);
+            const playersObj = serializeRoomPlayers(room);
+
             socket.emit('room_created', {
                 code: roomCode,
-                raceLength: lengthLabel
+                raceLength: lengthLabel,
+                players: playersObj // Send initial list to host
             });
-            console.log(`Room ${roomCode} created by ${data.name} with length ${lengthLabel}`);
+            console.log(`Room ${roomCode} created by ${data.name} (${socket.id})`);
         });
 
         socket.on('join_room', (data) => {
@@ -22,18 +29,20 @@ module.exports = (io) => {
             const result = joinRoom(code, socket.id, name);
 
             if (result.error) {
+                console.log(`Join Error in ${code} for ${name}: ${result.error}`);
                 socket.emit('error', { message: result.error });
             } else {
                 socket.join(code);
-                // Serialize the Map objects to Plain Objects for network transport (until Client supports full binary Lobby, we keep JSON for lobby)
+
                 const playersObj = serializeRoomPlayers(result.room);
 
+                // Broadcast to everyone in the room (including host and joining player)
                 io.to(code).emit('update_room', {
                     players: playersObj,
                     code: code,
                     raceLength: result.room.raceLength
                 });
-                console.log(`${name} joined room ${code}`);
+                console.log(`${name} (${socket.id}) joined room ${code}. Total players: ${result.room.players.size}`);
             }
         });
 

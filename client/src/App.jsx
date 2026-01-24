@@ -3,6 +3,7 @@ import io from 'socket.io-client';
 import HomeScreen from './screens/HomeScreen';
 import LobbyScreen from './screens/LobbyScreen';
 import GameScreen from './screens/GameScreen';
+import OrientationGuard from './components/OrientationGuard';
 import pageBg from './assets/page/page.jpg';
 import { preloadAllAssets } from './game/AssetLoader';
 
@@ -46,15 +47,13 @@ function App() {
             console.log("Connected to server:", socket.id);
         };
 
-        const onRoomCreated = ({ code, raceLength: serverLength }) => {
-            console.log("Room Created:", code, serverLength);
+        const onRoomCreated = ({ code, raceLength: serverLength, players: serverPlayers }) => {
+            console.log("Room Created:", code, serverLength, serverPlayers);
             setRoomCode(code);
             if (serverLength) setRaceLength(serverLength);
+            if (serverPlayers) setPlayers(serverPlayers);
             setScreen('lobby');
             setIsHost(true);
-            setPlayers({
-                [socket.id]: { id: socket.id, name: playerNameRef.current, isHost: true }
-            });
         };
 
         const onUpdateRoom = ({ players, code, raceLength: serverLength }) => {
@@ -136,6 +135,7 @@ function App() {
                 backgroundAttachment: 'fixed'
             }}
         >
+            <OrientationGuard />
             {screen === 'home' && (
                 <HomeScreen
                     onHost={handleStartHost}

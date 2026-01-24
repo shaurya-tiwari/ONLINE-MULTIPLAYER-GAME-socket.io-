@@ -13,7 +13,7 @@ const LobbyScreen = ({
     const [copied, setCopied] = useState(false);
 
     // Changed: Added max-h-screen and overflow handling to outer card
-    const cardStyle = "card-paper rough-edge w-full max-w-md flex flex-col gap-4 md:gap-8 items-center animate-fade-in max-h-[90vh] overflow-hidden py-8 px-6";
+    const cardStyle = "card-paper rough-edge w-full max-w-md flex flex-col gap-4 md:gap-8 items-center animate-fade-in max-h-[90vh] overflow-y-auto py-8 px-6";
     const primaryButtonStyle = "btn-ink transition-all active:scale-95 py-4 text-xl";
     const secondaryButtonStyle = "text-sm font-black border-b-2 border-transparent hover:border-ink transition-all mt-4 uppercase tracking-widest opacity-60 hover:opacity-100 cursor-pointer text-center w-full";
 
@@ -28,7 +28,7 @@ const LobbyScreen = ({
             <div className={cardStyle}>
 
                 {/* Room Details Badge */}
-                <div className="w-full flex justify-between items-start gap-2 mb-2">
+                <div className="w-full flex justify-between items-start gap-2 mb-2 shrink-0">
                     <div className="flex flex-col items-start">
                         <span className="text-[8px] font-black text-marker uppercase tracking-widest">Distance</span>
                         <span className="text-sm font-black text-ink">{raceLength || '500m'}</span>
@@ -49,7 +49,7 @@ const LobbyScreen = ({
                         onClick={handleCopy}
                         className="group relative cursor-pointer"
                     >
-                        <span className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter text-black transition-transform group-hover:scale-105 block leading-none">
+                        <span className="text-5xl md:text-7xl lg:text-8xl font-black tracking-tighter text-black transition-transform group-hover:scale-105 block leading-none landscape:text-4xl">
                             {roomCode}
                         </span>
                         <div className={`absolute -top-6 md:-top-8 left-1/2 -translate-x-1/2 bg-ink text-paper text-[10px] px-2 py-1 rounded transition-opacity ${copied ? 'opacity-100' : 'opacity-0'}`}>
@@ -59,7 +59,7 @@ const LobbyScreen = ({
                 </div>
 
                 {/* Player List Section - SCROLLABLE to save space */}
-                <div className="w-full flex-grow overflow-y-auto min-h-0 space-y-2 md:space-y-4 px-1 custom-scrollbar">
+                <div className="w-full flex-grow overflow-y-auto min-h-[200px] space-y-2 md:space-y-4 px-1 custom-scrollbar">
                     <div className="flex items-center justify-between border-b-2 border-ink pb-2 mb-2 md:mb-6 sticky top-0 bg-[#f4f1ea] z-10">
                         <h3 className="font-black uppercase tracking-tighter text-lg md:text-xl italic">Athletes</h3>
                         <span className="font-black text-xs md:text-sm bg-ink text-paper px-2 py-0.5 rounded-sm">{playerList.length}/4</span>
