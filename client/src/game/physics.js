@@ -7,7 +7,8 @@
 import { triggerShake } from '../game-features/cameraShake';
 import { createDustPuff, createRunDust } from '../game-features/visualEffects';
 import { getSpeedMultiplier } from '../game-features/playerspeedup';
-import { STATE_IDLE, STATE_RUN, STATE_JUMP, STATE_SLIDE, STATE_FINISHED } from './dsaConstants';
+import { STATE_IDLE, STATE_RUN, STATE_JUMP, STATE_SLIDE, STATE_FINISHED, STATE_REVERSE } from './dsaConstants';
+import { checkRoadBreakTraversed } from '../game-features/roadBreak/roadBreakLogic';
 
 export const PHYSICS_CONSTANTS = {
     GRAVITY: 0.8,
@@ -43,7 +44,7 @@ export const createPlayerState = (id, name, x = 100) => ({
     slideStartTime: 0
 });
 
-export const updatePlayerPhysics = (player, inputs, frameCount, raceLength = 10000, dt = 0.016) => {
+export const updatePlayerPhysics = (player, inputs, frameCount, raceLength = 10000, dt = 0.016, mapData = null) => {
     const now = Date.now();
     const safeDt = (dt <= 0 || dt > 0.1) ? 0.0166 : dt;
     const timeScale = safeDt * 60;
@@ -89,16 +90,26 @@ export const updatePlayerPhysics = (player, inputs, frameCount, raceLength = 100
         createDustPuff(player.x + player.w / 2, PHYSICS_CONSTANTS.GROUND_Y, 3);
     }
 
-    // --- 5. HORIZONTAL MOVEMENT ---
+    // --- 5. HORIZONTAL MOVEMENT (FORWARD & BACKWARD) ---
     const progress = Math.max(0, Math.min(1, player.x / raceLength));
     const speedMultiplier = getSpeedMultiplier(progress);
     const currentRunSpeed = (PHYSICS_CONSTANTS.RUN_SPEED * speedMultiplier) * timeScale;
 
+    let isMoving = false;
+    let facingLeft = (player.state & STATE_REVERSE) !== 0;
+
     if (inputs.right) {
         player.x += currentRunSpeed;
-        if (player.isGrounded && frameCount % 12 === 0) {
-            createRunDust(player.x, PHYSICS_CONSTANTS.GROUND_Y);
-        }
+        facingLeft = false;
+        isMoving = true;
+    } else if (inputs.left) {
+        player.x -= currentRunSpeed;
+        facingLeft = true;
+        isMoving = true;
+    }
+
+    if (isMoving && player.isGrounded && frameCount % 12 === 0) {
+        createRunDust(player.x, PHYSICS_CONSTANTS.GROUND_Y);
     }
 
     // --- 6. VERTICAL PHYSICS ---
@@ -112,16 +123,47 @@ export const updatePlayerPhysics = (player, inputs, frameCount, raceLength = 100
     const groundY = PHYSICS_CONSTANTS.GROUND_Y - currentHeight;
 
     if (player.y >= groundY) {
-        if (!player.isGrounded) {
-            // Landing feedback
-            triggerShake(4, 10);
-            createDustPuff(player.x + player.w / 2, PHYSICS_CONSTANTS.GROUND_Y, 8);
+        // Check if there's actually ground here (not a road break)
+        const currentGap = mapData ? checkRoadBreakTraversed(player, mapData) : null;
+
+        if (currentGap) {
+            // Over a gap!
+            player.isGrounded = false;
+            // Let the player fall naturally by gravity (vy will increase)
+        } else {
+            // Solid ground
+            if (!player.isGrounded) {
+                triggerShake(4, 10);
+                createDustPuff(player.x + player.w / 2, PHYSICS_CONSTANTS.GROUND_Y, 8);
+            }
+            player.y = groundY;
+            player.vy = 0;
+            player.isGrounded = true;
         }
-        player.y = groundY;
-        player.vy = 0;
-        player.isGrounded = true;
     } else {
         player.isGrounded = false;
+    }
+
+    // --- 7.5 FALL & RESPAWN DETECTION ---
+    // If player falls significantly below ground level, reset to before the gap
+    const fallThreshold = PHYSICS_CONSTANTS.GROUND_Y + 500;
+    if (player.y > fallThreshold) {
+        const gap = mapData ? checkRoadBreakTraversed(player, mapData) : null;
+        if (gap) {
+            // Respawn slightly behind the gap
+            player.x = gap.x - 120;
+        } else {
+            // Fallback safety reset
+            player.x -= 150;
+        }
+
+        // Reset vertical state to ground level
+        player.y = PHYSICS_CONSTANTS.GROUND_Y - PHYSICS_CONSTANTS.PLAYER_HEIGHT_STANDING;
+        player.vy = 0;
+        player.isGrounded = true;
+
+        // Immediate feedback
+        triggerShake(10, 20);
     }
 
     // --- 8. STATE MACHINE SYNC ---
@@ -141,6 +183,7 @@ export const updatePlayerPhysics = (player, inputs, frameCount, raceLength = 100
 
     // Preserve special flags (Finished)
     if ((player.state & STATE_FINISHED) !== 0) newState |= STATE_FINISHED;
+    if (facingLeft) newState |= STATE_REVERSE;
     player.state = newState;
 
     return player;

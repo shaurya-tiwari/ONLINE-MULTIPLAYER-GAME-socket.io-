@@ -4,6 +4,7 @@ const STORAGE_KEY = 'control-layout-v1';
 
 const DEFAULT_POSITIONS = {
     'mobile-run': { x: 24, y: 24, fromBottom: true, fromLeft: true, scale: 1, opacity: 1 },
+    'mobile-back': { x: 140, y: 24, fromBottom: true, fromLeft: true, scale: 1, opacity: 1 },
     'mobile-jump': { x: 24, y: 120, fromBottom: true, fromRight: true, scale: 1, opacity: 1 },
     'mobile-slide': { x: 24, y: 24, fromBottom: true, fromRight: true, scale: 1, opacity: 1 },
     'hud-main': { x: 16, y: 16, fromTop: true, fromLeft: true, scale: 1, opacity: 1 },
@@ -45,7 +46,7 @@ const MobileControls = () => {
         window.dispatchEvent(event);
     };
 
-    const keyMap = { run: 'ArrowRight', jump: 'Space', slide: 'ArrowDown' };
+    const keyMap = { run: 'ArrowRight', back: 'ArrowLeft', jump: 'Space', slide: 'ArrowDown' };
 
     const handleAction = (action, isDown) => {
         const key = keyMap[action];
@@ -64,6 +65,7 @@ const MobileControls = () => {
 
     const btnBase = "flex items-center justify-center text-ink/60 font-black transition-all active:scale-95 select-none touch-none border-[3px] border-ink/10 rounded-full bg-paper/60 hover:bg-paper/90 pointer-events-auto relative shadow-md transform origin-center";
     const runBtn = `${btnBase} w-28 h-28 sm:w-36 sm:h-36 text-3xl rotate-[-1deg] border-[#3b82f6]/30 text-[#3b82f6]`;
+    const backBtn = `${btnBase} w-20 h-20 sm:w-24 sm:h-24 text-xl rotate-[1deg] border-[#3b82f6]/20 text-[#3b82f6]/80`;
     const jumpBtn = `${btnBase} w-24 h-24 sm:w-32 sm:h-32 text-2xl rotate-[2deg] border-marker/30 text-marker hover:bg-marker/10`;
     const slideBtn = `${btnBase} w-24 h-24 sm:w-32 sm:h-32 text-2xl rotate-[-1deg] border-blue-500/30 text-blue-600 hover:bg-blue-500/10`;
 
@@ -99,9 +101,12 @@ const MobileControls = () => {
 
     return (
         <div className="sketch-ui-root fixed inset-0 pointer-events-none landscape-safe-area">
-            {/* Left: Run Button */}
+            {/* Left: Run Buttons */}
             <div style={getPosStyle('mobile-run')} className="pb-6 px-6">
                 <ControlButton label="RUN" style={runBtn} action="run" scale={positions['mobile-run']?.scale || 1} opacity={positions['mobile-run']?.opacity || 1} />
+            </div>
+            <div style={getPosStyle('mobile-back')} className="pb-6 px-6">
+                <ControlButton label="BACK" style={backBtn} action="back" scale={positions['mobile-back']?.scale || 1} opacity={positions['mobile-back']?.opacity || 1} />
             </div>
 
             {/* Center: Fullscreen */}

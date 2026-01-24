@@ -14,7 +14,7 @@ import { handleCollisions, buildSpatialHash } from './collisions';
 import { drawStickman } from './animations';
 import { getAsset } from './AssetLoader';
 import { getFinishLinePosition } from '../constants/raceLength';
-import { STATE_FINISHED, MAP_STRIDE, TYPE_TREE, TYPE_OBS_GROUND, TYPE_OBS_AIR } from './dsaConstants';
+import { STATE_FINISHED, MAP_STRIDE, TYPE_TREE, TYPE_OBS_GROUND, TYPE_OBS_AIR, TYPE_GAP_JUMP, TYPE_GAP_ROPE, TYPE_GAP_BRIDGE } from './dsaConstants';
 
 // Juice Features
 import { getShakeOffset, triggerShake } from '../game-features/cameraShake';
@@ -33,6 +33,7 @@ let inputTail = 0;
 const KEY_RIGHT = 1;
 const KEY_JUMP = 2;
 const KEY_SLIDE = 3;
+const KEY_LEFT = 4;
 
 // --- 2. GAME VARIABLES ---
 let animationFrameId;
@@ -46,12 +47,14 @@ let cameraX = 0;
 // Persistent Input State (Updated from Ring Buffer)
 let inputs = {
     right: false,
+    left: false,
     jump: false,
     slide: false
 };
 
 export const clearInputs = () => {
     inputs.right = false;
+    inputs.left = false;
     inputs.jump = false;
     inputs.slide = false;
     // Reset Ring Buffer
@@ -109,6 +112,7 @@ const pushEvent = (code, isDown) => {
 
 const mapKey = (code) => {
     if (code === 'ArrowRight' || code === 'KeyD') return KEY_RIGHT;
+    if (code === 'ArrowLeft' || code === 'KeyA') return KEY_LEFT;
     if (code === 'Space' || code === 'ArrowUp' || code === 'KeyW') return KEY_JUMP;
     if (code === 'ArrowDown' || code === 'KeyS') return KEY_SLIDE;
     return 0;
@@ -223,6 +227,8 @@ const loop = (currentTime) => {
 
         if (code === KEY_RIGHT) {
             inputs.right = isDown;
+        } else if (code === KEY_LEFT) {
+            inputs.left = isDown;
         } else if (code === KEY_JUMP) {
             inputs.jump = isDown;
             if (isDown) jumpOccurred = true;
@@ -329,7 +335,7 @@ const update = (dt, frameInputs) => {
             }
         }
     } else {
-        updatePlayerPhysics(player, frameInputs, frameCount, MAP_LENGTH, dt);
+        updatePlayerPhysics(player, frameInputs, frameCount, MAP_LENGTH, dt, mapData);
     }
 
     // DSA: Spatial Hash Collision Check
@@ -426,7 +432,32 @@ const render = (dt) => {
     const groundY = 500;
     if (!isMobile) { ctx.shadowColor = 'rgba(0,0,0,0.1)'; ctx.shadowBlur = 10; }
     ctx.strokeStyle = '#222'; ctx.lineWidth = 4;
-    ctx.beginPath(); ctx.moveTo(0, groundY); ctx.lineTo(MAP_LENGTH + 2000, groundY); ctx.stroke();
+
+    // Segmented Ground Rendering to show "Breaks"
+    ctx.beginPath();
+    let currentX = 0;
+    const stride = MAP_STRIDE;
+    const count = mapData ? mapData.length / stride : 0;
+
+    for (let i = 0; i < count; i++) {
+        const offset = i * stride;
+        const type = mapData[offset];
+        const gapX = mapData[offset + 1];
+        const gapW = mapData[offset + 3];
+
+        // If it's a gap, draw line up to the gap start, then move to gap end
+        if (type === TYPE_GAP_JUMP || type === TYPE_GAP_ROPE || type === TYPE_GAP_BRIDGE) {
+            ctx.moveTo(currentX, groundY);
+            ctx.lineTo(gapX, groundY);
+            currentX = gapX + gapW;
+        }
+    }
+
+    // Final segment to infinite or track end
+    ctx.moveTo(currentX, groundY);
+    ctx.lineTo(MAP_LENGTH + 2000, groundY);
+    ctx.stroke();
+
     if (!isMobile) ctx.shadowBlur = 0;
 
     // Ground Details
@@ -500,7 +531,7 @@ const render = (dt) => {
                     // Fix: Use natural dimensions from map data, not hardcoded 2x
                     ctx.drawImage(img, x, y, w, h);
                 }
-            } else { // Obstacles
+            } else if (type === TYPE_OBS_GROUND || type === TYPE_OBS_AIR) { // Only render actual obstacles
                 const imgType = type === TYPE_OBS_AIR ? 'air' : 'ground';
                 const img = getAsset(imgType, i);
 
@@ -513,6 +544,8 @@ const render = (dt) => {
                 ctx.fillStyle = 'rgba(0,0,0,0.15)';
                 ctx.beginPath(); ctx.ellipse(x + w / 2, groundY, w / 2.2, 8, 0, 0, Math.PI * 2); ctx.fill();
             }
+            // Note: TYPE_GAP_* types are skipped here because they represent missing ground, 
+            // handled by segmented ground line above. Visual assets for gaps will be added later.
         }
     }
 

@@ -18,6 +18,9 @@ const GAME_CONSTANTS = {
 const TYPE_TREE = 0;
 const TYPE_OBS_GROUND = 1;
 const TYPE_OBS_AIR = 2;
+const TYPE_GAP_JUMP = 3;
+const TYPE_GAP_ROPE = 4;
+const TYPE_GAP_BRIDGE = 5;
 
 const generateTrack = (length = 5000) => {
     // Temporary JS Arrays for logic (easier to push)
@@ -29,21 +32,40 @@ const generateTrack = (length = 5000) => {
 
     // 1. Generate Obstacles
     for (let x = 600; x < length; x += Math.random() * 800 + 500) {
-        const typeStr = Math.random() > 0.5 ? 'ground' : 'air';
-        let y = GAME_CONSTANTS.GROUND_Y - GAME_CONSTANTS.OBSTACLE_HEIGHT;
-        let w = GAME_CONSTANTS.OBSTACLE_WIDTH;
-        let h = GAME_CONSTANTS.OBSTACLE_HEIGHT;
-        let type = TYPE_OBS_GROUND;
+        // Randomly decide between an obstacle or a road break
+        const roll = Math.random();
 
-        if (typeStr === 'air') {
-            const desiredBottom = 450;
-            y = desiredBottom - h;
-            type = TYPE_OBS_AIR;
+        if (roll < 0.2) {
+            // Road Break Logic
+            const gapTypeRoll = Math.random();
+            let type = TYPE_GAP_JUMP;
+            if (gapTypeRoll > 0.6) type = TYPE_GAP_ROPE;
+            if (gapTypeRoll > 0.9) type = TYPE_GAP_BRIDGE;
+
+            const gapWidth = 150 + Math.random() * 150;
+            const gapX = Math.floor(x);
+
+            // Logic placeholder: y=500 for ground level break
+            items.push(type, gapX, GAME_CONSTANTS.GROUND_Y, Math.floor(gapWidth), 20);
+            existingObstacles.push({ x: gapX, w: gapWidth }); // Block trees
+        } else {
+            // Normal Obstacle Logic
+            const typeStr = Math.random() > 0.5 ? 'ground' : 'air';
+            let y = GAME_CONSTANTS.GROUND_Y - GAME_CONSTANTS.OBSTACLE_HEIGHT;
+            let w = GAME_CONSTANTS.OBSTACLE_WIDTH;
+            let h = GAME_CONSTANTS.OBSTACLE_HEIGHT;
+            let type = TYPE_OBS_GROUND;
+
+            if (typeStr === 'air') {
+                const desiredBottom = 450;
+                y = desiredBottom - h;
+                type = TYPE_OBS_AIR;
+            }
+
+            const obs = { x: Math.floor(x), y, w, h, type };
+            existingObstacles.push(obs);
+            items.push(type, obs.x, obs.y, obs.w, obs.h);
         }
-
-        const obs = { x: Math.floor(x), y, w, h, type };
-        existingObstacles.push(obs);
-        items.push(type, obs.x, obs.y, obs.w, obs.h);
     }
 
     // 2. Generate Trees

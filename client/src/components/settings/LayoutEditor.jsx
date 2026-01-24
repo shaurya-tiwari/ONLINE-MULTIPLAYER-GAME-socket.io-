@@ -5,6 +5,7 @@ const STORAGE_KEY = 'control-layout-v1';
 
 const DEFAULT_POSITIONS = {
     'mobile-run': { x: 24, y: 24, fromBottom: true, fromLeft: true, scale: 1, opacity: 1 },
+    'mobile-back': { x: 140, y: 24, fromBottom: true, fromLeft: true, scale: 1, opacity: 1 },
     'mobile-jump': { x: 24, y: 120, fromBottom: true, fromRight: true, scale: 1, opacity: 1 },
     'mobile-slide': { x: 24, y: 24, fromBottom: true, fromRight: true, scale: 1, opacity: 1 },
     'hud-main': { x: 16, y: 16, fromTop: true, fromLeft: true, scale: 1, opacity: 1 },
@@ -197,6 +198,12 @@ const LayoutEditor = () => {
                 return (
                     <div className={`${btnBase} ${glowStyle} w-28 h-28 sm:w-36 sm:h-36 text-3xl border-[#3b82f6]/30 text-[#3b82f6]`} style={style}>
                         <span className="relative z-10 uppercase tracking-tighter">RUN</span>
+                    </div>
+                );
+            case 'mobile-back':
+                return (
+                    <div className={`${btnBase} ${glowStyle} w-20 h-20 sm:w-24 sm:h-24 text-xl border-[#3b82f6]/20 text-[#3b82f6]/80`} style={style}>
+                        <span className="relative z-10 uppercase tracking-tighter">BACK</span>
                     </div>
                 );
             case 'mobile-jump':
