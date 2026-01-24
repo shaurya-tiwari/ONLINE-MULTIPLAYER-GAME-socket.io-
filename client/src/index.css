@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Edu+SA+Beginner:wght@400..700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -11,7 +13,7 @@
 body {
     margin: 0;
     overflow: hidden;
-    background-color: #f0f0f0;
+    background-color: #737373;
     color: var(--ink);
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     width: 100vw;
@@ -58,5 +60,72 @@ body {
         100% {
             transform: translateY(0px) rotate(-1deg);
         }
+    }
+
+    .vignette-overlay {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        z-index: 15;
+        background: radial-gradient(circle, transparent 40%, rgba(0, 0, 0, 0.3) 100%);
+        mix-blend-mode: multiply;
+    }
+
+    /* --- SKETCH UI SYSTEM (SCOPED) --- */
+    .sketch-ui-root {
+        font-family: 'Edu SA Beginner', cursive;
+        color: #0a0a0a;
+        line-height: 1.2;
+    }
+
+    .sketch-ui-root .btn-ink {
+        @apply flex items-center justify-center font-black transition-all active:scale-95 cursor-pointer select-none;
+        min-height: 3.5rem;
+        line-height: 1;
+        padding-top: 0.5rem;
+        padding-bottom: 0.5rem;
+        border-width: 3px;
+    }
+
+    .sketch-ui-root input {
+        line-height: 1.5;
+        padding-top: 0.75rem;
+        padding-bottom: 0.5rem;
+    }
+
+    .sketch-card {
+        @apply bg-[#fefcf5] border-[3px] border-ink relative;
+        box-shadow: 8px 8px 0px 0px rgba(0, 0, 0, 0.1);
+        transform: rotate(-0.5deg);
+    }
+
+    .sketch-card::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background-image: repeating-linear-gradient(45deg,
+                rgba(0, 0, 0, 0.02) 0px,
+                rgba(0, 0, 0, 0.02) 1px,
+                transparent 1px,
+                transparent 10px);
+        z-index: -1;
+    }
+
+    .marker-underline {
+        @apply relative inline-block;
+    }
+
+    .marker-underline::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        width: 100%;
+        height: 8px;
+        background: rgba(255, 69, 58, 0.3);
+        z-index: -1;
+        transform: skewX(-15deg) rotate(-1deg);
+        border-radius: 4px;
     }
 }

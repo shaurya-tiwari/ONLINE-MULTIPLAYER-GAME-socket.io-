@@ -13,9 +13,9 @@ const LobbyScreen = ({
     const [copied, setCopied] = useState(false);
 
     // Changed: Added max-h-screen and overflow handling to outer card
-    const cardStyle = "card-paper rough-edge w-full max-w-md flex flex-col gap-4 md:gap-8 items-center animate-fade-in max-h-[90vh] overflow-y-auto py-8 px-6";
-    const primaryButtonStyle = "btn-ink transition-all active:scale-95 py-4 text-xl";
-    const secondaryButtonStyle = "text-sm font-black border-b-2 border-transparent hover:border-ink transition-all mt-4 uppercase tracking-widest opacity-60 hover:opacity-100 cursor-pointer text-center w-full";
+    const cardStyle = "sketch-card w-full max-w-md flex flex-col gap-6 md:gap-8 items-center animate-fade-in max-h-[90vh] overflow-y-auto py-10 px-8 z-20";
+    const primaryButtonStyle = "btn-ink bg-marker text-paper border-ink transition-all active:scale-95 py-5 text-3xl shadow-[8px_8px_0px_0px_rgba(0,0,0,0.1)] w-full";
+    const secondaryButtonStyle = "text-xl font-black border-b-2 border-transparent hover:border-marker transition-all mt-6 uppercase tracking-widest opacity-50 hover:opacity-100 cursor-pointer text-center w-full";
 
     const handleCopy = () => {
         navigator.clipboard.writeText(roomCode);
@@ -24,7 +24,7 @@ const LobbyScreen = ({
     };
 
     return (
-        <div className="w-full h-full flex items-center justify-center p-4 md:p-6 bg-transparent overflow-hidden">
+        <div className="sketch-ui-root w-full h-full flex items-center justify-center p-4 md:p-6 bg-transparent overflow-hidden">
             <div className={cardStyle}>
 
                 {/* Room Details Badge */}
@@ -59,28 +59,30 @@ const LobbyScreen = ({
                 </div>
 
                 {/* Player List Section - SCROLLABLE to save space */}
-                <div className="w-full flex-grow overflow-y-auto min-h-[200px] space-y-2 md:space-y-4 px-1 custom-scrollbar">
-                    <div className="flex items-center justify-between border-b-2 border-ink pb-2 mb-2 md:mb-6 sticky top-0 bg-[#f4f1ea] z-10">
-                        <h3 className="font-black uppercase tracking-tighter text-lg md:text-xl italic">Athletes</h3>
-                        <span className="font-black text-xs md:text-sm bg-ink text-paper px-2 py-0.5 rounded-sm">{playerList.length}/4</span>
+                <div className="w-full flex-grow overflow-y-auto min-h-[200px] space-y-4 md:space-y-6 px-1 custom-scrollbar">
+                    <div className="flex items-center justify-between border-b-[3px] border-ink pb-2 mb-4 sticky top-0 bg-[#fefcf5] z-10">
+                        <h3 className="font-black uppercase tracking-tight text-3xl italic marker-underline">Athletes</h3>
+                        <span className="font-black text-lg bg-ink text-paper px-3 py-1 rotate-2">
+                            {playerList.length}/4
+                        </span>
                     </div>
 
                     <div className="space-y-2 md:space-y-3 pb-2">
                         {playerList.map((player) => (
-                            <div key={player.id} className="flex items-center justify-between group p-2 hover:bg-gray-50 transition-colors rounded-sm border-l-4 border-transparent hover:border-marker">
-                                <div className="flex items-center gap-3">
-                                    <div className={`w-8 h-8 rounded-full border-2 border-ink flex items-center justify-center font-black ${player.isHost ? 'bg-ink text-paper' : 'bg-transparent text-ink'}`}>
+                            <div key={player.id} className="flex items-center justify-between group p-3 hover:bg-marker/5 transition-colors rounded-lg border-l-4 border-transparent hover:border-marker">
+                                <div className="flex items-center gap-4">
+                                    <div className={`w-12 h-12 rounded-full border-[3px] border-ink flex items-center justify-center text-xl font-black ${player.isHost ? 'bg-ink text-paper' : 'bg-transparent text-ink'} transform rotate-${(player.name?.length || 0) % 6}`}>
                                         {player.name?.[0].toUpperCase()}
                                     </div>
                                     <div>
-                                        <p className={`font-black uppercase tracking-tight ${player.isHost ? 'text-lg' : 'text-base opacity-80'}`}>
+                                        <p className={`font-black uppercase tracking-tight ${player.isHost ? 'text-2xl' : 'text-xl opacity-80'}`}>
                                             {player.name}
                                         </p>
-                                        {player.isHost && <p className="text-[8px] font-black italic -mt-1 opacity-40">TEAM CAPTAIN</p>}
+                                        {player.isHost && <p className="text-xs font-black italic -mt-1 opacity-50">TEAM CAPTAIN</p>}
                                     </div>
                                 </div>
                                 {player.isHost && (
-                                    <span className="text-[10px] font-black border border-ink px-1.5 py-0.5 rounded uppercase tracking-tighter">HOST</span>
+                                    <span className="text-xs font-black border-[2px] border-ink px-2 py-0.5 rounded uppercase tracking-tighter rotate-[-3deg]">HOST</span>
                                 )}
                             </div>
                         ))}

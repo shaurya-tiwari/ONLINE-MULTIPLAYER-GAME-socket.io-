@@ -30,16 +30,16 @@ const OrientationGuard = () => {
     if (!isPortrait) return null;
 
     return (
-        <div className="fixed inset-0 z-[100] bg-[#f0f0f0] flex flex-col items-center justify-center p-8 text-center animate-fade-in backdrop-blur-sm">
-            {/* Background Pattern */}
-            <div className="absolute inset-0 opacity-5 pointer-events-none"
+        <div className="sketch-ui-root fixed inset-0 z-[100] bg-[#fefcf5] flex flex-col items-center justify-center p-8 text-center animate-fade-in">
+            {/* Background Pattern - Grid Paper Feel */}
+            <div className="absolute inset-0 opacity-[0.03] pointer-events-none"
                 style={{
-                    backgroundImage: `radial-gradient(#0a0a0a 1px, transparent 1px)`,
-                    backgroundSize: '24px 24px'
+                    backgroundImage: `linear-gradient(#0a0a0a 1px, transparent 1px), linear-gradient(90deg, #0a0a0a 1px, transparent 1px)`,
+                    backgroundSize: '40px 40px'
                 }}
             ></div>
 
-            <div className="relative z-10 max-w-sm w-full bg-white border-4 border-ink p-8 shadow-[12px_12px_0px_0px_rgba(10,10,10,0.1)] rough-edge transform rotate-1">
+            <div className="sketch-card relative z-10 max-w-sm w-full p-10 transform rotate-1">
                 {/* Visual Icon */}
                 <div className="mb-6 flex justify-center">
                     <div className="animate-[spin_4s_ease-in-out_infinite]">
@@ -50,18 +50,18 @@ const OrientationGuard = () => {
                 </div>
 
                 {/* Text Instructions */}
-                <h2 className="text-3xl font-black uppercase tracking-tighter mb-2 text-ink">
+                <h2 className="text-4xl font-black uppercase tracking-tight mb-4 text-ink marker-underline">
                     ROTATE DEVICE
                 </h2>
-                <p className="text-sm font-bold text-gray-400 uppercase tracking-widest leading-tight">
+                <p className="text-xl font-bold text-gray-500 uppercase tracking-widest leading-tight">
                     Please use landscape mode<br />for the best experience
                 </p>
 
-                {/* Horizontal Indicator */}
-                <div className="flex justify-center mt-8 gap-1">
-                    <div className="w-8 h-1 bg-marker rounded-full animate-pulse"></div>
-                    <div className="w-2 h-1 bg-marker/30 rounded-full"></div>
-                    <div className="w-2 h-1 bg-marker/30 rounded-full"></div>
+                {/* Horizontal Indicator - Sketchy Line */}
+                <div className="flex justify-center mt-10 gap-2">
+                    <div className="w-12 h-2 bg-marker rounded-full animate-pulse rotate-[-1deg]"></div>
+                    <div className="w-3 h-2 bg-marker/20 rounded-full rotate-[10deg]"></div>
+                    <div className="w-3 h-2 bg-marker/20 rounded-full rotate-[-5deg]"></div>
                 </div>
             </div>
         </div>
