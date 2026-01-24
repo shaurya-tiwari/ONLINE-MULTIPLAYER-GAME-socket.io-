@@ -15,14 +15,17 @@ const LayoutEditor = () => {
     const [draggingId, setDraggingId] = useState(null);
     const editorRef = useRef(null);
 
+    // CRUD - READ
     useEffect(() => {
-        // Load from local storage
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
             try {
-                setPositions(JSON.parse(saved));
+                const parsed = JSON.parse(saved);
+                // Ensure all default keys exist (Migration support)
+                setPositions({ ...DEFAULT_POSITIONS, ...parsed });
             } catch (e) {
                 console.error("Failed to load layout", e);
+                setPositions(DEFAULT_POSITIONS);
             }
         }
 
@@ -31,16 +34,25 @@ const LayoutEditor = () => {
         return () => window.removeEventListener('open-layout-editor', handleOpen);
     }, []);
 
+    // CRUD - UPDATE & CREATE (Save)
     const handleSave = () => {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(positions));
-        setIsActive(false);
-        // Dispatch event to notify components to update
-        window.dispatchEvent(new CustomEvent('layout-updated', { detail: positions }));
-        alert("Layout Saved!");
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(positions));
+            // Trigger storage event for same-tab updates if needed, 
+            // but custom event is more direct for our components.
+            window.dispatchEvent(new CustomEvent('layout-updated', { detail: positions }));
+            setIsActive(false);
+            console.log("Layout saved successfully");
+        } catch (e) {
+            alert("Failed to save layout! Local storage might be full or disabled.");
+        }
     };
 
+    // CRUD - DELETE (Reset to Defaults)
     const handleReset = () => {
-        if (confirm("Reset to default layout?")) {
+        if (confirm("Reset to default layout? This will erase your custom positions.")) {
+            // We don't delete the key entirely to keep a clean structure, 
+            // just set back to defaults.
             setPositions(DEFAULT_POSITIONS);
         }
     };
@@ -57,86 +69,125 @@ const LayoutEditor = () => {
         const px = e.clientX - rect.left;
         const py = e.clientY - rect.top;
 
-        // Calculate offset from corners based on element type
         const newPos = { ...positions[draggingId] };
 
-        if (newPos.fromLeft) newPos.x = Math.max(0, px);
-        if (newPos.fromRight) newPos.x = Math.max(0, rect.width - px);
-        if (newPos.fromTop) newPos.y = Math.max(0, py);
-        if (newPos.fromBottom) newPos.y = Math.max(0, rect.height - py);
+        // Boundary Logic & Snap
+        if (newPos.fromLeft) newPos.x = Math.max(10, Math.min(px, rect.width - 50));
+        if (newPos.fromRight) newPos.x = Math.max(10, Math.min(rect.width - px, rect.width - 50));
+        if (newPos.fromTop) newPos.y = Math.max(10, Math.min(py, rect.height - 50));
+        if (newPos.fromBottom) newPos.y = Math.max(10, Math.min(rect.height - py, rect.height - 50));
 
         setPositions({ ...positions, [draggingId]: newPos });
     };
 
-    const handlePointerUp = () => {
-        setDraggingId(null);
-    };
+    const handlePointerUp = () => setDraggingId(null);
 
     if (!isActive) return null;
+
+    // Visual styles to match game buttons
+    const btnBase = "flex items-center justify-center font-black select-none touch-none border-[3px] border-ink/20 rounded-full bg-paper pointer-events-auto relative shadow-xl cursor-move";
+
+    const getVisualComponent = (id) => {
+        switch (id) {
+            case 'mobile-run':
+                return (
+                    <div className={`${btnBase} w-28 h-28 sm:w-36 sm:h-36 text-3xl border-[#3b82f6]/30 text-[#3b82f6]`}>
+                        <span className="relative z-10 uppercase tracking-tighter">RUN</span>
+                        <div className="absolute inset-[-6px] border border-ink/5 rounded-full rotate-[-5deg] pointer-events-none"></div>
+                    </div>
+                );
+            case 'mobile-jump':
+                return (
+                    <div className={`${btnBase} w-24 h-24 sm:w-32 sm:h-32 text-2xl border-marker/30 text-marker`}>
+                        <span className="relative z-10 uppercase tracking-tighter">JUMP</span>
+                        <div className="absolute inset-[-6px] border border-ink/5 rounded-full rotate-[2deg] pointer-events-none"></div>
+                    </div>
+                );
+            case 'mobile-slide':
+                return (
+                    <div className={`${btnBase} w-24 h-24 sm:w-32 sm:h-32 text-2xl border-blue-500/30 text-blue-600`}>
+                        <span className="relative z-10 uppercase tracking-tighter">SLIDE</span>
+                        <div className="absolute inset-[-6px] border border-ink/5 rounded-full rotate-[-3deg] pointer-events-none"></div>
+                    </div>
+                );
+            case 'hud-main':
+                return (
+                    <div className="sketch-card bg-paper border-[3px] border-ink p-4 flex flex-col items-center gap-1 shadow-2xl rotate-[-1deg]">
+                        <span className="bg-ink text-paper text-[8px] sm:text-[10px] font-black px-2 py-0.5 rotate-1 uppercase tracking-widest">
+                            ROOM CODE
+                        </span>
+                        <div className="text-ink font-black text-xl sm:text-2xl px-4 py-1">ABCD</div>
+                    </div>
+                );
+            default:
+                return null;
+        }
+    };
 
     return (
         <div
             ref={editorRef}
-            className="fixed inset-0 z-[1000] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 touch-none"
+            className="fixed inset-0 z-[1000] bg-black/80 backdrop-blur-md touch-none select-none"
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
             onPointerLeave={handlePointerUp}
         >
+            {/* GRID OVERLAY FOR PRECISION */}
+            <div className="absolute inset-0 pointer-events-none opacity-5"
+                style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+
             {/* INSTRUCTIONS */}
-            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
-                <h2 className="text-paper text-4xl font-black uppercase tracking-tighter mb-2 italic">LAYOUT EDITOR</h2>
-                <p className="text-paper/60 text-sm font-bold uppercase tracking-widest">Drag buttons to reposition them</p>
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
+                <h2 className="text-paper text-6xl font-black uppercase tracking-tighter mb-4 italic opacity-10 leading-none">CUSTOM LAYOUT</h2>
+                <div className="p-4 bg-marker/10 border-2 border-marker border-dashed rounded-2xl animate-pulse">
+                    <p className="text-marker text-sm font-black uppercase tracking-[0.2em]">Drag elements to reposition</p>
+                </div>
             </div>
 
-            {/* VIRTUAL DRAGGABLE ELEMENTS */}
+            {/* DRAGGABLE REAL ELEMENTS */}
             {Object.entries(positions).map(([id, pos]) => (
                 <div
                     key={id}
                     onPointerDown={(e) => handlePointerDown(id, e)}
-                    className={`absolute p-4 border-2 border-dashed rounded-xl cursor-move transition-transform active:scale-95 ${draggingId === id ? 'border-marker bg-marker/20' : 'border-paper/40 bg-paper/5'}`}
+                    className={`absolute transition-transform ${draggingId === id ? 'scale-110 rotate-3 z-50' : 'z-10'}`}
                     style={{
                         top: pos.fromTop ? pos.y : 'auto',
                         bottom: pos.fromBottom ? pos.y : 'auto',
                         left: pos.fromLeft ? pos.x : 'auto',
                         right: pos.fromRight ? pos.x : 'auto',
-                        width: id === 'mobile-run' ? '120px' : (id === 'hud-main' ? '200px' : '100px'),
-                        height: id.includes('mobile') ? '100px' : '60px',
-                        zIndex: draggingId === id ? 10 : 1
+                        touchAction: 'none'
                     }}
                 >
-                    <div className="w-full h-full flex items-center justify-center text-center">
-                        <span className="text-paper font-black text-[10px] uppercase break-words leading-none">
-                            {id.replace('-', ' ')}
-                        </span>
-                    </div>
+                    {getVisualComponent(id)}
+
+                    {/* Visual indicator for dragging */}
+                    {draggingId === id && (
+                        <div className="absolute inset-0 border-4 border-marker border-dotted rounded-full scale-125 animate-ping opacity-30" />
+                    )}
                 </div>
             ))}
 
             {/* TOOLBAR */}
-            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex gap-4 pointer-events-auto">
+            <div className="absolute bottom-12 left-0 w-full flex justify-center gap-6 pointer-events-auto px-6 max-sm:flex-col items-center">
+                <button
+                    onClick={() => setIsActive(false)}
+                    className="px-8 py-4 bg-paper/5 border-2 border-paper/10 text-paper/60 font-black uppercase tracking-widest rounded-2xl hover:bg-paper/10 transition-all text-xs"
+                >
+                    CANCEL
+                </button>
                 <button
                     onClick={handleReset}
-                    className="px-8 py-3 bg-paper/10 border-2 border-paper/20 text-paper font-black uppercase tracking-widest rounded-lg hover:bg-paper/20 transition-all text-xs"
+                    className="px-8 py-4 bg-red-500/10 border-2 border-red-500/20 text-red-500/80 font-black uppercase tracking-widest rounded-2xl hover:bg-red-500/20 transition-all text-xs"
                 >
-                    RESET
+                    RESET DEFAULT
                 </button>
                 <button
                     onClick={handleSave}
-                    className="px-12 py-3 bg-marker text-paper font-black uppercase tracking-widest rounded-lg hover:scale-105 active:scale-95 transition-all shadow-xl text-xs"
+                    className="px-16 py-5 bg-marker text-paper font-black uppercase tracking-[0.2em] rounded-2xl hover:scale-110 active:scale-95 transition-all shadow-[0_10px_40px_-10px_rgba(255,51,102,0.5)] text-sm italic"
                 >
                     SAVE CHANGES
                 </button>
             </div>
-
-            {/* CANCEL BUTTON */}
-            <button
-                onClick={() => setIsActive(false)}
-                className="absolute top-6 right-6 text-paper/40 hover:text-paper transition-colors"
-            >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-8 h-8">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-            </button>
         </div>
     );
 };
