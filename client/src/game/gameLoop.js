@@ -213,19 +213,35 @@ const loop = (currentTime) => {
     lastFrameTime = currentTime;
 
     // Process Input Ring Buffer
+    let jumpOccurred = false;
+    let slideOccurred = false;
+
     while (inputHead !== inputTail) {
         const offset = inputTail * EVENT_SIZE;
         const code = inputRingBuffer[offset];
         const isDown = inputRingBuffer[offset + 1] === 1;
 
-        if (code === KEY_RIGHT) inputs.right = isDown;
-        if (code === KEY_JUMP) inputs.jump = isDown;
-        if (code === KEY_SLIDE) inputs.slide = isDown;
+        if (code === KEY_RIGHT) {
+            inputs.right = isDown;
+        } else if (code === KEY_JUMP) {
+            inputs.jump = isDown;
+            if (isDown) jumpOccurred = true;
+        } else if (code === KEY_SLIDE) {
+            inputs.slide = isDown;
+            if (isDown) slideOccurred = true;
+        }
 
         inputTail = (inputTail + 1) % MAX_EVENTS;
     }
 
-    update(dt);
+    // Effective inputs for this frame: prioritize "down" events if they occurred in the buffer
+    const effectiveInputs = {
+        ...inputs,
+        jump: inputs.jump || jumpOccurred,
+        slide: inputs.slide || slideOccurred
+    };
+
+    update(dt, effectiveInputs);
     render(dt);
     frameCount++;
     animationFrameId = requestAnimationFrame(loop);
@@ -287,7 +303,7 @@ const handleLegacyUpdate = (remotePlayer) => {
     // ... kept for fallback if needed ...
 };
 
-const update = (dt) => {
+const update = (dt, frameInputs) => {
     if (!users[myId]) return;
     const player = users[myId];
 
@@ -313,7 +329,7 @@ const update = (dt) => {
             }
         }
     } else {
-        updatePlayerPhysics(player, inputs, frameCount, MAP_LENGTH, dt);
+        updatePlayerPhysics(player, frameInputs, frameCount, MAP_LENGTH, dt);
     }
 
     // DSA: Spatial Hash Collision Check

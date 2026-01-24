@@ -1,18 +1,18 @@
 import { getAsset } from './AssetLoader';
 
+/**
+ * Syncs the run animation with the actual distance traveled.
+ * This eliminates the "sliding" look and ensures animation speed
+ * always matches the movement speed perfectly.
+ */
 export const drawRunStickman = (ctx, x, y, width, height, frameCount) => {
-    // Animation Speed config
-    // 45 frames is a lot. If we play at 60fps, it takes ~0.75 seconds to loop.
-    // That sounds reasonable for a run cycle.
-    // Let's play 1 frame every 5 ticks (12fps animation).
-    const FRAMES_PER_CHANGE = 3;
+    // Distance (in pixels) the player must travel to advance one animation frame
+    // 15-20 usually feels good for this character size
+    const distancePerFrame = 18;
 
-    // Determine current frame index (0 to 44)
-    const totalFrames = 8; // Or however many loaded, getAsset handles modulo, but for math we can just pass frameCount
-
-    // Pass raw frameCount to getAsset logic? No, getAsset takes index.
-    // Calculate index manually to control speed
-    const frameIndex = Math.floor(frameCount / FRAMES_PER_CHANGE);
+    // Use absolute x position to determine the frame
+    // This makes the animation independent of FPS and perfectly synced with ground
+    const frameIndex = Math.floor(Math.abs(x) / distancePerFrame);
 
     const img = getAsset('run', frameIndex);
 

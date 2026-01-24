@@ -1,6 +1,7 @@
 /**
- * Physics Engine
- * Refactored for maximum smoothness and frame independence
+ * Physics Engine - Professional Edition
+ * Refactored for maximum responsiveness, fluid transitions and frame independence.
+ * Features: Jump Buffering, Coyote Time, and Deterministic State Machine.
  */
 
 import { triggerShake } from '../game-features/cameraShake';
@@ -10,12 +11,17 @@ import { STATE_IDLE, STATE_RUN, STATE_JUMP, STATE_SLIDE, STATE_FINISHED } from '
 
 export const PHYSICS_CONSTANTS = {
     GRAVITY: 0.8,
-    JUMP_FORCE: -15, // Restored to original
+    JUMP_FORCE: -15,
     RUN_SPEED: 5,
     GROUND_Y: 500,
     PLAYER_HEIGHT_STANDING: 60,
     PLAYER_HEIGHT_SLIDING: 30,
-    PLAYER_WIDTH: 40
+    PLAYER_WIDTH: 40,
+
+    // Professional Feel Constants
+    COYOTE_TIME_MS: 100,        // Grace period after leaving ground to still jump
+    JUMP_BUFFER_MS: 150,       // Time before landing where a jump press is "queued"
+    SLIDE_DURATION_MS: 500,    // Max slide duration
 };
 
 export const createPlayerState = (id, name, x = 100) => ({
@@ -29,60 +35,85 @@ export const createPlayerState = (id, name, x = 100) => ({
     state: STATE_IDLE,
     finishTime: 0,
     isGrounded: true,
+
+    // Internal State Trackers for "Feel"
+    lastJumpInput: false,
+    lastTimeGrounded: 0,       // For Coyote Time
+    jumpBufferTime: 0,         // For Jump Buffering
     slideStartTime: 0
 });
 
 export const updatePlayerPhysics = (player, inputs, frameCount, raceLength = 10000, dt = 0.016) => {
-    // Standardize timeScale (target 60fps)
-    const timeScale = Math.min(dt * 60, 2.0); // Cap at 2.0 to prevent huge jumps during lag
+    const now = Date.now();
+    const safeDt = (dt <= 0 || dt > 0.1) ? 0.0166 : dt;
+    const timeScale = safeDt * 60;
 
-    // --- 1. SLIDE LOGIC ---
+    // --- 1. STATE PRE-PROCESSING ---
     const isSliding = (player.state & STATE_SLIDE) !== 0;
-    let wantSlide = false;
 
+    // Update Grounded Status and Coyote Time
+    if (player.isGrounded) {
+        player.lastTimeGrounded = now;
+    }
+
+    // --- 2. INPUT PROCESSING (BUFFERING & EDGE DETECTION) ---
+    const jumpPressed = !!inputs.jump;
+    const justPressedJump = jumpPressed && !player.lastJumpInput;
+
+    // Buffering: If jump pressed, store the time
+    if (justPressedJump) {
+        player.jumpBufferTime = now;
+    }
+    player.lastJumpInput = jumpPressed;
+
+    // --- 3. SLIDE LOGIC ---
+    let wantSlide = false;
     if (inputs.slide && (inputs.right || isSliding)) {
-        if (!isSliding) player.slideStartTime = Date.now();
-        const elapsed = Date.now() - (player.slideStartTime || 0);
-        if (elapsed < 500) wantSlide = true;
+        if (!isSliding) player.slideStartTime = now;
+        const elapsedSling = now - (player.slideStartTime || 0);
+        if (elapsedSling < PHYSICS_CONSTANTS.SLIDE_DURATION_MS) wantSlide = true;
     } else {
         player.slideStartTime = 0;
     }
 
-    // --- 2. HORIZONTAL MOVEMENT ---
+    // --- 4. ACCURATE JUMP TRIGGER ---
+    // Conditions for manual jump: Just pressed or Buffered within window
+    const bufferValid = (now - player.jumpBufferTime) < PHYSICS_CONSTANTS.JUMP_BUFFER_MS;
+    const coyoteValid = (now - player.lastTimeGrounded) < PHYSICS_CONSTANTS.COYOTE_TIME_MS;
+
+    if (bufferValid && (player.isGrounded || coyoteValid) && !wantSlide) {
+        player.vy = PHYSICS_CONSTANTS.JUMP_FORCE;
+        player.isGrounded = false;
+        player.lastTimeGrounded = 0; // Consumption
+        player.jumpBufferTime = 0;   // Consumption
+        createDustPuff(player.x + player.w / 2, PHYSICS_CONSTANTS.GROUND_Y, 3);
+    }
+
+    // --- 5. HORIZONTAL MOVEMENT ---
     const progress = Math.max(0, Math.min(1, player.x / raceLength));
     const speedMultiplier = getSpeedMultiplier(progress);
-    const runSpeed = (PHYSICS_CONSTANTS.RUN_SPEED * speedMultiplier) * timeScale;
+    const currentRunSpeed = (PHYSICS_CONSTANTS.RUN_SPEED * speedMultiplier) * timeScale;
 
     if (inputs.right) {
-        player.x += runSpeed;
-        // Run dust
+        player.x += currentRunSpeed;
         if (player.isGrounded && frameCount % 12 === 0) {
             createRunDust(player.x, PHYSICS_CONSTANTS.GROUND_Y);
         }
     }
 
-    // --- 3. VERTICAL MOVEMENT (JUMP & GRAVITY) ---
-    if (inputs.jump && player.isGrounded && !wantSlide) {
-        player.vy = PHYSICS_CONSTANTS.JUMP_FORCE; // Set initial velocity (unscaled here)
-        player.isGrounded = false;
-        createDustPuff(player.x + player.w / 2, PHYSICS_CONSTANTS.GROUND_Y, 3);
-    }
-
-    // Apply Velocity and Gravity
+    // --- 6. VERTICAL PHYSICS ---
     if (!player.isGrounded) {
-        // Vertical step: displacement = velocity * time
         player.y += player.vy * timeScale;
-        // Gravity step: velocity += gravity * time
         player.vy += PHYSICS_CONSTANTS.GRAVITY * timeScale;
     }
 
-    // --- 4. GROUND COLLISION ---
+    // --- 7. GROUND COLLISION & RESOLUTION ---
     const currentHeight = wantSlide ? PHYSICS_CONSTANTS.PLAYER_HEIGHT_SLIDING : PHYSICS_CONSTANTS.PLAYER_HEIGHT_STANDING;
     const groundY = PHYSICS_CONSTANTS.GROUND_Y - currentHeight;
 
     if (player.y >= groundY) {
         if (!player.isGrounded) {
-            // Landing
+            // Landing feedback
             triggerShake(4, 10);
             createDustPuff(player.x + player.w / 2, PHYSICS_CONSTANTS.GROUND_Y, 8);
         }
@@ -93,7 +124,7 @@ export const updatePlayerPhysics = (player, inputs, frameCount, raceLength = 100
         player.isGrounded = false;
     }
 
-    // --- 5. STATE UPDATES ---
+    // --- 8. STATE MACHINE SYNC ---
     let newState = STATE_IDLE;
     if (!player.isGrounded) {
         newState = STATE_JUMP;
@@ -104,9 +135,11 @@ export const updatePlayerPhysics = (player, inputs, frameCount, raceLength = 100
     } else if (inputs.right) {
         newState = STATE_RUN;
         player.h = PHYSICS_CONSTANTS.PLAYER_HEIGHT_STANDING;
+    } else {
+        player.h = PHYSICS_CONSTANTS.PLAYER_HEIGHT_STANDING;
     }
 
-    // Preserve FINISHED state
+    // Preserve special flags (Finished)
     if ((player.state & STATE_FINISHED) !== 0) newState |= STATE_FINISHED;
     player.state = newState;
 
