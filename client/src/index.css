@@ -26,8 +26,6 @@ body {
     width: 100vw;
     height: 100vh;
     position: fixed;
-    /* Mobile Safe Area Support */
-    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
 @layer components {
@@ -116,7 +114,7 @@ body {
     }
 
     .landscape-safe-area {
-        @apply px-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)];
+        @apply pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] pb-[env(safe-area-inset-bottom)];
     }
 }
 

@@ -95,8 +95,11 @@ module.exports = (io) => {
                 console.warn(`Suspicious player_won from ${name}: x=${x}`);
                 return;
             }
+
+            // Reset state so new players can join
+            room.gameState = 'lobby';
             io.to(code).emit('game_over', { winner: name });
-            console.log(`Player ${name} won in room ${code}`);
+            console.log(`Player ${name} won in room ${code}. State reset to lobby.`);
         });
 
         socket.on('restart_game', ({ code }) => {
@@ -121,6 +124,12 @@ module.exports = (io) => {
                     if (room) {
                         const result = leaveRoom(socket.id);
                         if (result.code) {
+                            // If only host left, reset to lobby
+                            if (room.players.size === 1 && room.gameState === 'racing') {
+                                room.gameState = 'lobby';
+                                console.log(`Resetting room ${code} to lobby because only host remains`);
+                            }
+
                             // Serialize Map -> Object
                             const playersObj = serializeRoomPlayers(room);
                             io.to(result.code).emit('update_room', {

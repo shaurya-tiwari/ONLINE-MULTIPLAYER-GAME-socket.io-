@@ -37,49 +37,53 @@ const MobileControls = () => {
     };
 
     // Sketch themed Button Styles
-    const btnBase = "flex items-center justify-center text-ink/60 font-black transition-all active:scale-90 select-none touch-none border-[3px] border-ink/10 rounded-full bg-paper/50 hover:bg-paper/80 pointer-events-auto relative shadow-sm";
+    const btnBase = "flex items-center justify-center text-ink/60 font-black transition-all active:scale-90 select-none touch-none border-[3px] border-ink/10 rounded-full bg-paper/60 hover:bg-paper/90 pointer-events-auto relative shadow-md";
 
-    // Run Button (Left, Bottom)
-    const runBtn = `${btnBase} w-20 h-20 md:w-24 md:h-24 text-xl rotate-[-1deg]`;
-
-    // Action Buttons (Right) - Vertical Column
-    const jumpBtn = `${btnBase} w-16 h-16 md:w-20 md:h-20 text-lg rotate-[2deg] border-marker/20 text-marker hover:bg-marker/10`;
-    const slideBtn = `${btnBase} w-16 h-16 md:w-20 md:h-20 text-lg rotate-[-1deg] border-blue-500/20 text-blue-600 hover:bg-blue-500/10`;
+    // Bigger Buttons for better touch targets - EXTRA BIG
+    const runBtn = `${btnBase} w-28 h-28 sm:w-36 sm:h-36 text-3xl rotate-[-1deg] border-[#3b82f6]/30 text-[#3b82f6]`;
+    const jumpBtn = `${btnBase} w-24 h-24 sm:w-32 sm:h-32 text-2xl rotate-[2deg] border-marker/30 text-marker hover:bg-marker/10`;
+    const slideBtn = `${btnBase} w-24 h-24 sm:w-32 sm:h-32 text-2xl rotate-[-1deg] border-blue-500/30 text-blue-600 hover:bg-blue-500/10`;
 
     const ControlButton = ({ label, style, action }) => (
         <button
             className={style}
-            onPointerDown={() => handleAction(action, true)}
-            onPointerUp={() => handleAction(action, false)}
-            onPointerLeave={() => handleAction(action, false)}
+            onPointerDown={(e) => { e.preventDefault(); handleAction(action, true); }}
+            onPointerUp={(e) => { e.preventDefault(); handleAction(action, false); }}
+            onPointerCancel={(e) => { e.preventDefault(); handleAction(action, false); }}
+            onPointerLeave={(e) => { e.preventDefault(); handleAction(action, false); }}
+            style={{ touchAction: 'none' }}
         >
-            <span className="relative z-10 uppercase tracking-tighter">{label}</span>
-            {/* Subtle Decorative Sketch Rings */}
-            <div className="absolute inset-[-4px] border border-ink/5 rounded-full rotate-[-5deg] pointer-events-none"></div>
-            <div className="absolute inset-[-2px] border border-ink/5 rounded-full rotate-[3deg] pointer-events-none"></div>
+            <span className="relative z-10 uppercase tracking-tighter font-black">{label}</span>
+            <div className="absolute inset-[-6px] border border-ink/5 rounded-full rotate-[-5deg] pointer-events-none"></div>
+            <div className="absolute inset-[-3px] border border-ink/5 rounded-full rotate-[3deg] pointer-events-none"></div>
         </button>
     );
 
     return (
-        <div className="sketch-ui-root w-full h-full flex justify-between items-end px-6 pb-[max(1rem,env(safe-area-inset-bottom))] pointer-events-none landscape-safe-area">
-            {/* Left: Run Button */}
-            <div className="flex items-center pb-2">
+        <div className="sketch-ui-root w-full h-full flex justify-between items-end px-6 sm:px-16 pb-[max(4rem,calc(2rem+env(safe-area-inset-bottom)))] pointer-events-none landscape-safe-area">
+            {/* Left: Run Button - Shifted up and bigger */}
+            <div className="flex flex-col items-center gap-4 pb-6">
                 <ControlButton label="RUN" style={runBtn} action="run" />
             </div>
 
-            {/* Center: Fullscreen Toggle */}
-            <div className="flex items-center pb-4">
+            {/* Center: System Controls (Shifted higher) */}
+            <div className="flex flex-col items-center pb-12 gap-6">
                 <button
                     onClick={toggleFullscreen}
-                    className="btn-ink pointer-events-auto bg-paper/30 text-ink/40 border-ink/10 text-[9px] px-3 py-1.5 rounded-full relative transform rotate-1 hover:bg-paper/60"
+                    className="btn-ink pointer-events-auto bg-paper/60 text-ink/80 border-ink/20 text-[11px] sm:text-sm px-6 py-2.5 rounded-full relative transform rotate-1 hover:bg-paper/90 shadow-md"
                     style={{ minHeight: 'auto', width: 'auto' }}
                 >
-                    <span className="relative z-10 tracking-[0.15em] font-black uppercase">FULLSCREEN</span>
+                    <span className="relative z-10 tracking-[0.2em] font-black uppercase flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-5 h-5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
+                        </svg>
+                        MAXIMIZE
+                    </span>
                 </button>
             </div>
 
-            {/* Right: JUMP & SLIDE */}
-            <div className="flex flex-col items-center gap-4 md:gap-6 pb-2">
+            {/* Right: JUMP & SLIDE - Stacked for thumb comfort */}
+            <div className="flex flex-col items-center gap-8 sm:gap-10 pb-6">
                 <ControlButton label="JUMP" style={jumpBtn} action="jump" />
                 <ControlButton label="SLIDE" style={slideBtn} action="slide" />
             </div>
