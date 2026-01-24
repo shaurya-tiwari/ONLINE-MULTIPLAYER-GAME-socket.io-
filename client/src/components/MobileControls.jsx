@@ -1,6 +1,34 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+
+const STORAGE_KEY = 'control-layout-v1';
+
+const DEFAULT_POSITIONS = {
+    'mobile-run': { x: 24, y: 24, fromBottom: true, fromLeft: true },
+    'mobile-jump': { x: 24, y: 120, fromBottom: true, fromRight: true },
+    'mobile-slide': { x: 24, y: 24, fromBottom: true, fromRight: true },
+    'hud-main': { x: 16, y: 16, fromTop: true, fromLeft: true },
+};
 
 const MobileControls = () => {
+    const [positions, setPositions] = useState(DEFAULT_POSITIONS);
+
+    useEffect(() => {
+        const loadLayout = () => {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                try {
+                    setPositions(JSON.parse(saved));
+                } catch (e) {
+                    console.error("Failed to load layout", e);
+                }
+            }
+        };
+
+        loadLayout();
+        window.addEventListener('layout-updated', loadLayout);
+        return () => window.removeEventListener('layout-updated', loadLayout);
+    }, []);
+
     const simulateKey = (code, type) => {
         const event = new KeyboardEvent(type, {
             code: code,
@@ -10,18 +38,11 @@ const MobileControls = () => {
         window.dispatchEvent(event);
     };
 
-    // Mapping actions to keyboard keys
-    const keyMap = {
-        run: 'ArrowRight',
-        jump: 'Space',
-        slide: 'ArrowDown',
-    };
+    const keyMap = { run: 'ArrowRight', jump: 'Space', slide: 'ArrowDown' };
 
     const handleAction = (action, isDown) => {
         const key = keyMap[action];
-        if (key) {
-            simulateKey(key, isDown ? 'keydown' : 'keyup');
-        }
+        if (key) simulateKey(key, isDown ? 'keydown' : 'keyup');
     };
 
     const toggleFullscreen = () => {
@@ -29,17 +50,12 @@ const MobileControls = () => {
             document.documentElement.requestFullscreen().catch(err => {
                 console.warn(`Error attempting to enable full-screen mode: ${err.message}`);
             });
-        } else {
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
-            }
+        } else if (document.exitFullscreen) {
+            document.exitFullscreen();
         }
     };
 
-    // Sketch themed Button Styles
-    const btnBase = "flex items-center justify-center text-ink/60 font-black transition-all active:scale-90 select-none touch-none border-[3px] border-ink/10 rounded-full bg-paper/60 hover:bg-paper/90 pointer-events-auto relative shadow-md";
-
-    // Bigger Buttons for better touch targets - EXTRA BIG
+    const btnBase = "flex items-center justify-center text-ink/60 font-black transition-all active:scale-95 select-none touch-none border-[3px] border-ink/10 rounded-full bg-paper/60 hover:bg-paper/90 pointer-events-auto relative shadow-md";
     const runBtn = `${btnBase} w-28 h-28 sm:w-36 sm:h-36 text-3xl rotate-[-1deg] border-[#3b82f6]/30 text-[#3b82f6]`;
     const jumpBtn = `${btnBase} w-24 h-24 sm:w-32 sm:h-32 text-2xl rotate-[2deg] border-marker/30 text-marker hover:bg-marker/10`;
     const slideBtn = `${btnBase} w-24 h-24 sm:w-32 sm:h-32 text-2xl rotate-[-1deg] border-blue-500/30 text-blue-600 hover:bg-blue-500/10`;
@@ -59,32 +75,45 @@ const MobileControls = () => {
         </button>
     );
 
+    const getPosStyle = (id) => {
+        const p = positions[id] || DEFAULT_POSITIONS[id];
+        return {
+            position: 'absolute',
+            bottom: p.fromBottom ? p.y : 'auto',
+            top: p.fromTop ? p.y : 'auto',
+            left: p.fromLeft ? p.x : 'auto',
+            right: p.fromRight ? p.x : 'auto',
+        };
+    };
+
     return (
-        <div className="sketch-ui-root w-full h-full flex justify-between items-end px-6 sm:px-16 pb-[max(4rem,calc(2rem+env(safe-area-inset-bottom)))] pointer-events-none landscape-safe-area">
-            {/* Left: Run Button - Shifted up and bigger */}
-            <div className="flex flex-col items-center gap-4 pb-6">
+        <div className="sketch-ui-root fixed inset-0 pointer-events-none landscape-safe-area">
+            {/* Left: Run Button */}
+            <div style={getPosStyle('mobile-run')} className="pb-6 px-6">
                 <ControlButton label="RUN" style={runBtn} action="run" />
             </div>
 
-            {/* Center: System Controls (Shifted higher) */}
-            <div className="flex flex-col items-center pb-12 gap-6">
+            {/* Center: Fullscreen (Fixed bottom center) */}
+            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 pb-4">
                 <button
                     onClick={toggleFullscreen}
                     className="btn-ink pointer-events-auto bg-paper/60 text-ink/80 border-ink/20 text-[11px] sm:text-sm px-6 py-2.5 rounded-full relative transform rotate-1 hover:bg-paper/90 shadow-md"
                     style={{ minHeight: 'auto', width: 'auto' }}
                 >
                     <span className="relative z-10 tracking-[0.2em] font-black uppercase flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-5 h-5">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" />
-                        </svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" /></svg>
                         MAXIMIZE
                     </span>
                 </button>
             </div>
 
-            {/* Right: JUMP & SLIDE - Stacked for thumb comfort */}
-            <div className="flex flex-col items-center gap-8 sm:gap-10 pb-6">
+            {/* Right: JUMP */}
+            <div style={getPosStyle('mobile-jump')} className="pb-6 px-12">
                 <ControlButton label="JUMP" style={jumpBtn} action="jump" />
+            </div>
+
+            {/* Right: SLIDE */}
+            <div style={getPosStyle('mobile-slide')} className="pb-6 px-12">
                 <ControlButton label="SLIDE" style={slideBtn} action="slide" />
             </div>
         </div>

@@ -3,6 +3,8 @@ import io from 'socket.io-client';
 import HomeScreen from './screens/HomeScreen';
 import LobbyScreen from './screens/LobbyScreen';
 import GameScreen from './screens/GameScreen';
+import SettingsPanel from './components/settings/SettingsPanel';
+import LayoutEditor from './components/settings/LayoutEditor';
 import OrientationGuard from './components/OrientationGuard';
 import pageBg from './assets/page/page.jpg';
 import { preloadAllAssets } from './game/AssetLoader';
@@ -135,6 +137,8 @@ function App() {
                 backgroundAttachment: 'fixed'
             }}
         >
+            <LayoutEditor />
+            {screen !== 'game' && <SettingsPanel />}
             <OrientationGuard />
             {screen === 'home' && (
                 <HomeScreen
