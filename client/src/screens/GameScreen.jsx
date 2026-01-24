@@ -7,10 +7,10 @@ import CanvasCover from '../components/CanvasCover';
 const STORAGE_KEY = 'control-layout-v1';
 
 const DEFAULT_POSITIONS = {
-    'mobile-run': { x: 24, y: 24, fromBottom: true, fromLeft: true },
-    'mobile-jump': { x: 24, y: 120, fromBottom: true, fromRight: true },
-    'mobile-slide': { x: 24, y: 24, fromBottom: true, fromRight: true },
-    'hud-main': { x: 16, y: 16, fromTop: true, fromLeft: true },
+    'mobile-run': { x: 24, y: 24, fromBottom: true, fromLeft: true, scale: 1, opacity: 1 },
+    'mobile-jump': { x: 24, y: 120, fromBottom: true, fromRight: true, scale: 1, opacity: 1 },
+    'mobile-slide': { x: 24, y: 24, fromBottom: true, fromRight: true, scale: 1, opacity: 1 },
+    'hud-main': { x: 16, y: 16, fromTop: true, fromLeft: true, scale: 1, opacity: 1 },
 };
 
 const GameScreen = ({ socket, roomCode, playerId, players, gameMap, raceLength }) => {
@@ -24,7 +24,14 @@ const GameScreen = ({ socket, roomCode, playerId, players, gameMap, raceLength }
             const saved = localStorage.getItem(STORAGE_KEY);
             if (saved) {
                 try {
-                    setPositions(JSON.parse(saved));
+                    const parsed = JSON.parse(saved);
+                    const merged = { ...DEFAULT_POSITIONS };
+                    Object.keys(parsed).forEach(key => {
+                        if (merged[key]) {
+                            merged[key] = { ...merged[key], ...parsed[key] };
+                        }
+                    });
+                    setPositions(merged);
                 } catch (e) {
                     console.error("Failed to load layout", e);
                 }
@@ -92,6 +99,9 @@ const GameScreen = ({ socket, roomCode, playerId, players, gameMap, raceLength }
             top: p.fromTop ? p.y : 'auto',
             left: p.fromLeft ? p.x : 'auto',
             right: p.fromRight ? p.x : 'auto',
+            transform: `scale(${p.scale || 1})`,
+            opacity: p.opacity || 1,
+            transformOrigin: p.fromTop ? (p.fromLeft ? 'top left' : 'top right') : (p.fromLeft ? 'bottom left' : 'bottom right')
         };
     };
 
