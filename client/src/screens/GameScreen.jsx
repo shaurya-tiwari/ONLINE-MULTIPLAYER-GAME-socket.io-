@@ -82,7 +82,11 @@ const GameScreen = ({ socket, roomCode, playerId, players, gameMap, raceLength }
     return (
         <div className="w-full h-full min-h-screen flex flex-col items-center justify-center p-4 md:p-8 bg-transparent overflow-hidden relative">
             {/* Main Game Container - Fixed Aspect Ratio Box with framing */}
-            <div className="relative w-full max-w-6xl aspect-video bg-transparent shadow-[10px_10px_0px_0px_rgba(0,0,0,0.05)] overflow-hidden shrink-0 border-4 border-ink rough-edge">
+            {/* FIX: Using max-h-[80vh] ensures the box never exceeds 80% of screen height, so bottom border is always visible. */}
+            {/* 3. CANVAS BOX */}
+            {/* Logic: For screens < 950px (Mobile/Small Tablet), use 'aspect-[3/2]' (Square but wide). For Desktop, use 'aspect-video'. */}
+            {/* Height: Capped at 60vh on mobile, 80vh on desktop. Width: Tighter on mobile (max-w-xl). */}
+            <div className="relative w-full max-w-xl lg:max-w-5xl max-h-[60vh] lg:max-h-[80vh] aspect-[3/2] lg:aspect-video bg-transparent shadow-[10px_10px_0px_0px_rgba(0,0,0,0.1)] overflow-hidden shrink-0 border-4 border-ink rounded-2xl">
                 {/* Canvas Cover (Grass Overlay) - Behind Canvas */}
                 <CanvasCover />
 

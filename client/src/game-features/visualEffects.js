@@ -97,7 +97,7 @@ export const updateVisualEffects = (playerSpeed, isSprinting) => {
         }
     }
 
-    targetZoom = isSprinting ? 0.85 : 1.0;
+    targetZoom = isSprinting ? 1.05 : 1.2;
     currentZoom += (targetZoom - currentZoom) * 0.1;
 
     return { currentZoom };
@@ -105,7 +105,7 @@ export const updateVisualEffects = (playerSpeed, isSprinting) => {
 
 export const drawWorldEffects = (ctx) => {
     ctx.save();
-    ctx.fillStyle = '#bbb';
+    ctx.fillStyle = '#838383ff';
 
     // Batch drawing if possible, but canvas context switch is expensive.
     // Simple iteration.
