@@ -14,7 +14,8 @@ import { handleCollisions, buildSpatialHash } from './collisions';
 import { drawStickman } from './animations';
 import { getAsset } from './AssetLoader';
 import { getFinishLinePosition } from '../constants/raceLength';
-import { STATE_FINISHED, MAP_STRIDE, TYPE_TREE, TYPE_OBS_GROUND, TYPE_OBS_AIR, TYPE_GAP_JUMP, TYPE_GAP_ROPE, TYPE_GAP_BRIDGE } from './dsaConstants';
+import { STATE_FINISHED, MAP_STRIDE, TYPE_TREE, TYPE_OBS_GROUND, TYPE_OBS_AIR, TYPE_GAP_JUMP, TYPE_GAP_ROPE, TYPE_GAP_BRIDGE, STATE_ROPE, STATE_JUMP } from './dsaConstants';
+import { createRopeInstance, updateRopePhysics, checkRopeGrab, syncPlayerToRope } from '../game-features/roadBreak/jump/ropeSwing';
 
 // Juice Features
 import { getShakeOffset, triggerShake } from '../game-features/cameraShake';
@@ -28,6 +29,11 @@ const EVENT_SIZE = 2; // [KeyCode, IsDown]
 const inputRingBuffer = new Uint8Array(MAX_EVENTS * EVENT_SIZE);
 let inputHead = 0;
 let inputTail = 0;
+
+// Rope Context
+let activeRope = null;
+let lastRopeGapId = -1; // To prevent immediate re-grab of same rope gap
+const ropeStates = new Map(); // Persistent physics state for all world ropes
 
 // Mapping Keys to Byte Codes
 const KEY_RIGHT = 1;
@@ -296,8 +302,10 @@ const parsePlayerUpdate = (buffer) => {
     }
 
     const target = remotePlayers[id].target;
-    target.x = view.getFloat32(offset, true); offset += 4;
-    target.y = view.getFloat32(offset, true); offset += 4;
+    const tx = view.getFloat32(offset, true); offset += 4;
+    const ty = view.getFloat32(offset, true); offset += 4;
+    target.x = isNaN(tx) ? 100 : tx;
+    target.y = isNaN(ty) ? 440 : ty;
     target.state = view.getUint8(offset); offset += 1;
     const flags = view.getUint8(offset); offset += 1; // [Finished(1bit), ...]
     target.finished = (flags & 1) === 1;
@@ -310,77 +318,141 @@ const handleLegacyUpdate = (remotePlayer) => {
 };
 
 const update = (dt, frameInputs) => {
-    if (!users[myId]) return;
-    const player = users[myId];
+    try {
+        if (!users[myId]) return;
+        const player = users[myId];
 
-    updateCountdown(() => {
-        triggerShake(15, 20);
-        createDustPuff(player.x + player.w / 2, 500, 15);
-    });
+        updateCountdown(() => {
+            triggerShake(15, 20);
+            createDustPuff(player.x + player.w / 2, 500, 15);
+        });
 
-    if (isRaceLocked()) return;
+        if (isRaceLocked()) return;
 
-    // Check Finish
-    if (player.x >= MAP_LENGTH) {
-        player.state |= STATE_FINISHED;
-        if (!player.finished) {
-            player.finished = true;
-            triggerShake(10, 30);
-            if (socketRef && roomCodeRef) {
-                socketRef.emit('player_won', {
-                    code: roomCodeRef,
-                    name: player.name,
-                    x: player.x
-                });
+        // Check Finish
+        if (player.x >= MAP_LENGTH) {
+            player.state |= STATE_FINISHED;
+            if (!player.finished) {
+                player.finished = true;
+                triggerShake(10, 30);
+                if (socketRef && roomCodeRef) {
+                    socketRef.emit('player_won', {
+                        code: roomCodeRef,
+                        name: player.name,
+                        x: player.x
+                    });
+                }
+            }
+        } else {
+            // --- ENHANCED ROPE SYSTEM ---
+            const count = mapData ? mapData.length / MAP_STRIDE : 0;
+            for (let i = 0; i < count; i++) {
+                const offset = i * MAP_STRIDE;
+                if (mapData[offset] === TYPE_GAP_ROPE) {
+                    const gapX = mapData[offset + 1];
+                    const gapW = mapData[offset + 3];
+
+                    // 1. Get or Create persistent rope state
+                    let rope = ropeStates.get(i);
+                    if (!rope) {
+                        rope = createRopeInstance({ x: gapX, w: gapW });
+                        ropeStates.set(i, rope);
+                    }
+
+                    // 2. Process Physics (Always active for all ropes)
+                    const isHeld = (player.state & STATE_ROPE) && activeRope === rope;
+                    const ropeInputs = isHeld ? frameInputs : { left: false, right: false };
+                    updateRopePhysics(rope, ropeInputs, dt);
+
+                    // 3. Handle Active Interaction
+                    if (isHeld) {
+                        syncPlayerToRope(player, rope);
+
+                        // Exit Rope: Jump press
+                        const now = Date.now();
+                        const justPressedJump = frameInputs.jump && !player.lastJumpInput;
+                        const canRelease = (now - (player.ropeGrabTime || 0)) > 300;
+
+                        if (canRelease && justPressedJump) {
+                            player.state &= ~STATE_ROPE;
+
+                            // REALISTIC PENDULUM THROW (Inertia Boost):
+                            // v = omega * L (Tangential Speed)
+                            const tangSpeed = rope.angularVelocity * rope.length;
+
+                            // Increased scale (0.4) to make the rope "throw" the player
+                            const PHYSICS_SCALE = 0.4;
+                            const tVx = tangSpeed * Math.cos(rope.angle) * PHYSICS_SCALE;
+                            const tVy = -tangSpeed * Math.sin(rope.angle) * PHYSICS_SCALE;
+
+                            // Launch trajectory: High influence from rope velocity + smaller jump kick ( -10 )
+                            player.vx = tVx;
+                            player.vy = tVy - 10;
+
+                            activeRope = null;
+                            triggerShake(12, 15); // Slightly stronger shake for better feedback
+                        }
+                    } else if (!(player.state & STATE_ROPE) && (player.state & STATE_JUMP)) {
+                        // 4. Check for New Grab
+                        if (i !== lastRopeGapId && Math.abs(player.x - gapX) < 400) {
+                            if (checkRopeGrab(player, rope)) {
+                                activeRope = rope;
+                                player.state |= STATE_ROPE;
+                                player.ropeGrabTime = Date.now();
+                                lastRopeGapId = i;
+                                triggerShake(8, 10);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Cleanup far ropes periodically to save memory
+            if (frameCount % 600 === 0) {
+                for (const [id, rope] of ropeStates) {
+                    if (Math.abs(player.x - rope.anchorX) > 2000) ropeStates.delete(id);
+                }
+            }
+
+            if (!(player.state & STATE_ROPE)) {
+                updatePlayerPhysics(player, frameInputs, frameCount, MAP_LENGTH, dt, mapData);
+                if (player.isGrounded) lastRopeGapId = -1;
             }
         }
-    } else {
-        updatePlayerPhysics(player, frameInputs, frameCount, MAP_LENGTH, dt, mapData);
-    }
 
-    // DSA: Spatial Hash Collision Check
-    if (mapData) {
-        handleCollisions(player, mapData); // Uses spatial hash internally now
-    }
+        // Keep track of jump input for state machine (even during ropes)
+        player.lastJumpInput = !!frameInputs.jump;
 
-    // --- DSA: BINARY EMIT ---
-    if (socketRef && roomCodeRef) {
-        const now = Date.now();
-        if (now - lastEmitTime > EMIT_RATE) {
-            // Pack Data
-            // Format: [Code(4), ID_LEN(1), ID(...), X(4), Y(4), State(1), Flags(1)]
-
-            let offset = 0;
-            // Write Code
-            for (let i = 0; i < 4; i++) {
-                updateBytes[offset++] = roomCodeRef.charCodeAt(i);
-            }
-
-            // Write ID
-            const idLen = player.id.length;
-            updateBytes[offset++] = idLen;
-            for (let i = 0; i < idLen; i++) {
-                updateBytes[offset++] = player.id.charCodeAt(i);
-            }
-
-            // Write Floats using DataView (Little Endian)
-            updateView.setFloat32(offset, player.x, true); offset += 4;
-            updateView.setFloat32(offset, player.y, true); offset += 4;
-
-            // Write State & Flags
-            updateBytes[offset++] = player.state;
-            updateBytes[offset++] = player.finished ? 1 : 0;
-
-            // Send sub-buffer
-            const packet = new Uint8Array(updateBuffer, 0, offset);
-            socketRef.emit('player_update', packet);
-
-            lastEmitTime = now;
+        // DSA: Spatial Hash Collision Check
+        if (mapData) {
+            handleCollisions(player, mapData); // Uses spatial hash internally now
         }
-    }
 
-    cameraX = player.x - 100;
-    if (cameraX < 0) cameraX = 0;
+        // --- DSA: BINARY EMIT ---
+        if (socketRef && roomCodeRef) {
+            const now = Date.now();
+            if (now - lastEmitTime > EMIT_RATE) {
+                // Pack Data ...
+                let offset = 0;
+                for (let i = 0; i < 4; i++) { updateBytes[offset++] = roomCodeRef.charCodeAt(i); }
+                const idLen = player.id.length;
+                updateBytes[offset++] = idLen;
+                for (let i = 0; i < idLen; i++) { updateBytes[offset++] = player.id.charCodeAt(i); }
+                updateView.setFloat32(offset, player.x, true); offset += 4;
+                updateView.setFloat32(offset, player.y, true); offset += 4;
+                updateBytes[offset++] = player.state;
+                updateBytes[offset++] = player.finished ? 1 : 0;
+                const packet = new Uint8Array(updateBuffer, 0, offset);
+                socketRef.emit('player_update', packet);
+                lastEmitTime = now;
+            }
+        }
+
+        cameraX = player.x - 100;
+        if (cameraX < 0 || isNaN(cameraX)) cameraX = 0;
+    } catch (err) {
+        console.error("Game update error:", err);
+    }
 };
 
 // DSA: Update Remote Players (Interpolation)
@@ -400,183 +472,203 @@ export const updateRemotePlayers = (dt) => {
 };
 
 const render = (dt) => {
-    if (!ctx || !canvas) return;
+    try {
+        if (!ctx || !canvas) return;
 
-    const me = users[myId];
-    const progress = me ? me.x / MAP_LENGTH : 0;
-    const sprinting = inputs.right || isFinalSprint(progress);
-    const { currentZoom } = updateVisualEffects(me?.vx || 0, sprinting);
-    const shake = getShakeOffset();
+        const me = users[myId];
+        const progress = me ? me.x / MAP_LENGTH : 0;
+        const sprinting = inputs.right || isFinalSprint(progress);
+        const { currentZoom } = updateVisualEffects(me?.vx || 0, sprinting);
+        const shake = getShakeOffset();
 
-    updateRemotePlayers(dt);
+        updateRemotePlayers(dt);
 
-    // 1. Clear & Setup
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (canvas.width === 0 || canvas.height === 0) return;
+        // 1. Clear & Setup
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        if (canvas.width === 0 || canvas.height === 0) return;
 
-    ctx.save();
-    const BASE_HEIGHT = 600; const BASE_WIDTH = 1000;
-    // Calculate scale to best fit the screen width, with a minimum to prevent too tiny rendering
-    const baseScale = Math.max(0.4, canvas.width / BASE_WIDTH);
+        ctx.save();
+        const BASE_HEIGHT = 600; const BASE_WIDTH = 1000;
+        // Calculate scale to best fit the screen width, with a minimum to prevent too tiny rendering
+        const baseScale = Math.max(0.4, canvas.width / BASE_WIDTH);
 
-    // Position Ground (500) at 65% of screen height
-    const desiredGroundY = canvas.height * 0.65;
-    const verticalOffset = (desiredGroundY / baseScale) - 500;
+        // Position Ground (500) at 65% of screen height
+        const desiredGroundY = canvas.height * 0.65;
+        const verticalOffset = (desiredGroundY / baseScale) - 500;
 
-    ctx.scale(baseScale * currentZoom, baseScale * currentZoom);
-    ctx.translate(-cameraX + shake.x, verticalOffset + shake.y);
+        const zoom = isNaN(currentZoom) ? 1.0 : currentZoom;
+        const finalScale = baseScale * zoom;
+        ctx.scale(finalScale, finalScale);
 
-    drawWorldEffects(ctx);
+        const camX = isNaN(cameraX) ? 0 : cameraX;
+        ctx.translate(-camX + shake.x, verticalOffset + shake.y);
 
-    // 2. Ground
-    const groundY = 500;
-    if (!isMobile) { ctx.shadowColor = 'rgba(0,0,0,0.1)'; ctx.shadowBlur = 10; }
-    ctx.strokeStyle = '#222'; ctx.lineWidth = 4;
+        drawWorldEffects(ctx);
 
-    // Segmented Ground Rendering to show "Breaks"
-    ctx.beginPath();
-    let currentX = 0;
-    const stride = MAP_STRIDE;
-    const count = mapData ? mapData.length / stride : 0;
+        // 2. Ground
+        const groundY = 500;
+        if (!isMobile) { ctx.shadowColor = 'rgba(0,0,0,0.1)'; ctx.shadowBlur = 10; }
+        ctx.strokeStyle = '#222'; ctx.lineWidth = 4;
 
-    for (let i = 0; i < count; i++) {
-        const offset = i * stride;
-        const type = mapData[offset];
-        const gapX = mapData[offset + 1];
-        const gapW = mapData[offset + 3];
+        // Segmented Ground Rendering to show "Breaks"
+        ctx.beginPath();
+        let currentX = 0;
+        const stride = MAP_STRIDE;
+        const count = mapData ? mapData.length / stride : 0;
 
-        // If it's a gap, draw line up to the gap start, then move to gap end
-        if (type === TYPE_GAP_JUMP || type === TYPE_GAP_ROPE || type === TYPE_GAP_BRIDGE) {
-            ctx.moveTo(currentX, groundY);
-            ctx.lineTo(gapX, groundY);
-            currentX = gapX + gapW;
+        for (let i = 0; i < count; i++) {
+            const offset = i * stride;
+            const type = mapData[offset];
+            const gapX = mapData[offset + 1];
+            const gapW = mapData[offset + 3];
+
+            // If it's a gap, draw line up to the gap start, then move to gap end
+            if (type === TYPE_GAP_JUMP || type === TYPE_GAP_ROPE || type === TYPE_GAP_BRIDGE) {
+                ctx.moveTo(currentX, groundY);
+                ctx.lineTo(gapX, groundY);
+                currentX = gapX + gapW;
+            }
         }
-    }
 
-    // Final segment to infinite or track end
-    ctx.moveTo(currentX, groundY);
-    ctx.lineTo(MAP_LENGTH + 2000, groundY);
-    ctx.stroke();
+        // Final segment to infinite or track end
+        ctx.moveTo(currentX, groundY);
+        ctx.lineTo(MAP_LENGTH + 2000, groundY);
+        ctx.stroke();
 
-    if (!isMobile) ctx.shadowBlur = 0;
+        if (!isMobile) ctx.shadowBlur = 0;
 
-    // Ground Details
-    ctx.strokeStyle = '#e0e0e0'; ctx.lineWidth = 2;
-    const startX = Math.floor(cameraX / 50) * 50;
-    const viewWidth = canvas.width / (baseScale * currentZoom);
-    const endX = startX + viewWidth + 100;
+        // Ground Details
+        ctx.strokeStyle = '#e0e0e0'; ctx.lineWidth = 2;
+        const startX = Math.floor(camX / 50) * 50;
+        const viewWidth = canvas.width / (finalScale || 1);
+        const endX = startX + viewWidth + 100;
 
-    ctx.beginPath();
-    for (let x = startX; x < endX; x += 100) {
-        if (x > MAP_LENGTH + 2000) break;
-        ctx.moveTo(x, groundY); ctx.lineTo(x - 15, groundY + 15);
-    }
-    ctx.stroke();
+        ctx.beginPath();
+        for (let x = startX; x < endX; x += 100) {
+            if (x > MAP_LENGTH + 2000) break;
+            ctx.moveTo(x, groundY); ctx.lineTo(x - 15, groundY + 15);
+        }
+        ctx.stroke();
 
-    // 3. FINISH LINE
-    const finishImg = getAsset('finish', 0);
-    if (finishImg) {
-        // Draw image anchored at bottom (groundY) and centered or aligned with MAP_LENGTH
-        // Scaling to a reasonable height (e.g. 300px matchine old flag)
-        const targetHeight = 300;
-        const scale = targetHeight / finishImg.height;
-        const targetWidth = finishImg.width * scale;
+        // 3. FINISH LINE
+        const finishImg = getAsset('finish', 0);
+        if (finishImg) {
+            const targetHeight = 300;
+            const scale = targetHeight / (finishImg.height || 300);
+            const targetWidth = (finishImg.width || 300) * scale;
+            ctx.drawImage(finishImg, MAP_LENGTH - targetWidth / 2, groundY - targetHeight, targetWidth, targetHeight);
+        } else {
+            ctx.fillStyle = '#222';
+            for (let i = 0; i < 4; i++) { ctx.fillRect(MAP_LENGTH, groundY - 300 + (i * 75), 10, 37.5); }
+            ctx.lineWidth = 2; ctx.strokeStyle = '#222'; ctx.strokeRect(MAP_LENGTH, groundY - 300, 10, 300);
+            ctx.fillStyle = '#ef5350'; ctx.beginPath(); ctx.moveTo(MAP_LENGTH, groundY - 300); ctx.lineTo(MAP_LENGTH - 100, groundY - 275); ctx.lineTo(MAP_LENGTH, groundY - 250); ctx.fill();
+            ctx.fillStyle = '#222'; ctx.font = '900 32px "Inter", sans-serif'; ctx.fillText("FINISH", MAP_LENGTH + 20, groundY - 150);
+        }
 
-        ctx.drawImage(finishImg, MAP_LENGTH - targetWidth / 2, groundY - targetHeight, targetWidth, targetHeight);
-    } else {
-        // Fallback if image not ready (though it should be preloaded)
-        ctx.fillStyle = '#222';
-        for (let i = 0; i < 4; i++) { ctx.fillRect(MAP_LENGTH, groundY - 300 + (i * 75), 10, 37.5); }
-        ctx.lineWidth = 2; ctx.strokeStyle = '#222'; ctx.strokeRect(MAP_LENGTH, groundY - 300, 10, 300);
-        ctx.fillStyle = '#ef5350'; ctx.beginPath(); ctx.moveTo(MAP_LENGTH, groundY - 300); ctx.lineTo(MAP_LENGTH - 100, groundY - 275); ctx.lineTo(MAP_LENGTH, groundY - 250); ctx.fill();
-        ctx.fillStyle = '#222'; ctx.font = '900 32px "Inter", sans-serif'; ctx.fillText("FINISH", MAP_LENGTH + 20, groundY - 150);
-    }
+        // DSA: RENDER ITERATION (Data Oriented)
+        if (mapData) {
+            let low = 0, high = (mapData.length / MAP_STRIDE) - 1;
+            let startIndex = 0;
+            while (low <= high) {
+                let mid = (low + high) >>> 1;
+                let mx = mapData[mid * MAP_STRIDE + 1];
+                // Increase padding to 1000 to prevent wide gaps from culling too early
+                if (mx + 1000 < camX) { startIndex = mid + 1; low = mid + 1; }
+                else high = mid - 1;
+            }
 
-    // DSA: RENDER ITERATION (Data Oriented)
-    if (mapData) {
-        // mapData is Int16Array. Stride = 5. Sorted by X.
-        // [Type, X, Y, W, H]
-        // Binary Search Start Index
-        let low = 0, high = (mapData.length / MAP_STRIDE) - 1;
-        let startIndex = 0;
+            const count = mapData.length / MAP_STRIDE;
+            for (let i = startIndex; i < count; i++) {
+                const offset = i * MAP_STRIDE;
+                const x = mapData[offset + 1];
+                if (x > camX + viewWidth) break; // Culling
 
-        while (low <= high) {
-            let mid = (low + high) >>> 1;
-            let mx = mapData[mid * MAP_STRIDE + 1];
-            if (mx + 300 < cameraX) { // aprox width
-                startIndex = mid + 1;
-                low = mid + 1;
+                const type = mapData[offset + 0];
+                const y = mapData[offset + 2];
+                const w = mapData[offset + 3];
+                const h = mapData[offset + 4];
+
+                if (type === TYPE_TREE) {
+                    const img = getAsset('tree', i);
+                    if (img) {
+                        ctx.fillStyle = 'rgba(0,0,0,0.1)';
+                        ctx.beginPath(); ctx.ellipse(x + w, groundY, w / 3, 8, 0, 0, Math.PI * 2); ctx.fill();
+                        ctx.drawImage(img, x, y, w, h);
+                    }
+                } else if (type === TYPE_OBS_GROUND || type === TYPE_OBS_AIR) {
+                    const imgType = type === TYPE_OBS_AIR ? 'air' : 'ground';
+                    const img = getAsset(imgType, i);
+                    if (img) ctx.drawImage(img, x, y, w, h);
+                    else {
+                        ctx.fillStyle = type === TYPE_OBS_AIR ? '#ef5350' : '#ffa726';
+                        if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(x, y, w, h, 10); ctx.fill(); ctx.stroke(); }
+                        else ctx.fillRect(x, y, w, h);
+                    }
+                    ctx.fillStyle = 'rgba(0,0,0,0.15)';
+                    ctx.beginPath(); ctx.ellipse(x + w / 2, groundY, w / 2.2, 8, 0, 0, Math.PI * 2); ctx.fill();
+                } else if (type === TYPE_GAP_ROPE) {
+                    const anchorX = x + w / 2;
+                    const anchorY = -300; // Match createRopeInstance anchorY
+                    let endX, endY;
+
+                    const rope = ropeStates.get(i);
+                    if (rope) {
+                        endX = rope.currentX; endY = rope.currentY;
+                    } else {
+                        endX = anchorX;
+                        endY = anchorY + 720;
+                    }
+                    if (!isNaN(endX) && !isNaN(endY)) {
+                        ctx.save();
+                        ctx.strokeStyle = '#3e2723'; ctx.lineWidth = 5; // Darker and thicker for visibility
+                        ctx.beginPath(); ctx.moveTo(anchorX, anchorY);
+                        ctx.quadraticCurveTo(anchorX + (endX - anchorX) * 0.5, anchorY + (endY - anchorY) * 0.8, endX, endY);
+                        ctx.stroke();
+                        ctx.fillStyle = '#1b110b';
+                        ctx.beginPath(); ctx.arc(endX, endY, 8, 0, Math.PI * 2); ctx.fill();
+                        ctx.restore();
+                    }
+                }
+            }
+        }
+
+        // 4. Players
+        Object.values(users).forEach(player => {
+            if (isNaN(player.x) || isNaN(player.y)) return;
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            const distFromGround = Math.max(0, (groundY - (player.y + player.h)));
+            const shadowScale = Math.max(0.5, 1 - distFromGround / 200);
+            ctx.beginPath(); ctx.ellipse(player.x + player.w / 2, groundY, (player.w / 1.5) * shadowScale, 6 * shadowScale, 0, 0, Math.PI * 2); ctx.fill();
+
+            const isHanging = (player.state & STATE_ROPE) !== 0;
+            if (isHanging) ctx.globalAlpha = 0.5;
+            drawStickman(ctx, player.x, player.y, player.state, frameCount, '#000');
+            if (isHanging) ctx.globalAlpha = 1.0;
+
+            ctx.font = 'bold 14px "Inter", sans-serif';
+            const name = player.name || "Player";
+            const widthText = ctx.measureText(name).width + 20;
+            const bx = player.x + (player.w / 2) - (widthText / 2);
+            const by = player.y - 45;
+            ctx.fillStyle = getPlayerColor(player.id);
+            if (ctx.roundRect) {
+                ctx.beginPath(); ctx.roundRect(bx, by, widthText, 26, 13); ctx.fill();
             } else {
-                high = mid - 1;
+                ctx.fillRect(bx, by, widthText, 26);
             }
-        }
+            ctx.strokeStyle = 'rgba(0,0,0,0.1)'; ctx.lineWidth = 1; ctx.stroke();
+            ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+            ctx.fillText(name.toUpperCase(), bx + widthText / 2, by + 13);
+        });
 
-        // Iterate forward until out of view
-        const count = mapData.length / MAP_STRIDE;
-        for (let i = startIndex; i < count; i++) {
-            const offset = i * MAP_STRIDE;
-            const x = mapData[offset + 1];
-            if (x > cameraX + viewWidth) break; // Culling
+        ctx.restore();
 
-            const type = mapData[offset + 0];
-            const y = mapData[offset + 2];
-            const w = mapData[offset + 3];
-            const h = mapData[offset + 4];
-
-            if (type === TYPE_TREE) {
-                const img = getAsset('tree', i);
-                if (img) {
-                    ctx.fillStyle = 'rgba(0,0,0,0.1)';
-                    ctx.beginPath(); ctx.ellipse(x + w, groundY, w / 3, 8, 0, 0, Math.PI * 2); ctx.fill();
-                    // Fix: Use natural dimensions from map data, not hardcoded 2x
-                    ctx.drawImage(img, x, y, w, h);
-                }
-            } else if (type === TYPE_OBS_GROUND || type === TYPE_OBS_AIR) { // Only render actual obstacles
-                const imgType = type === TYPE_OBS_AIR ? 'air' : 'ground';
-                const img = getAsset(imgType, i);
-
-                if (img) {
-                    ctx.drawImage(img, x, y, w, h);
-                } else {
-                    ctx.fillStyle = type === TYPE_OBS_AIR ? '#ef5350' : '#ffa726';
-                    ctx.beginPath(); ctx.roundRect(x, y, w, h, 10); ctx.fill(); ctx.stroke();
-                }
-                ctx.fillStyle = 'rgba(0,0,0,0.15)';
-                ctx.beginPath(); ctx.ellipse(x + w / 2, groundY, w / 2.2, 8, 0, 0, Math.PI * 2); ctx.fill();
-            }
-            // Note: TYPE_GAP_* types are skipped here because they represent missing ground, 
-            // handled by segmented ground line above. Visual assets for gaps will be added later.
-        }
+        drawScreenEffects(ctx, canvas.width, canvas.height);
+        renderHUD();
+        renderCountdown(ctx, canvas.width, canvas.height, Math.max(0.6, Math.min(1.0, canvas.width / 1200)));
+    } catch (err) {
+        console.error("Game render error:", err);
     }
-
-    // 4. Players
-    Object.values(users).forEach(player => {
-        // Shadow
-        ctx.fillStyle = 'rgba(0,0,0,0.2)';
-        const distFromGround = Math.max(0, (groundY - (player.y + player.h)));
-        const shadowScale = Math.max(0.5, 1 - distFromGround / 200);
-        ctx.beginPath(); ctx.ellipse(player.x + player.w / 2, groundY, (player.w / 1.5) * shadowScale, 6 * shadowScale, 0, 0, Math.PI * 2); ctx.fill();
-
-        drawStickman(ctx, player.x, player.y, player.state, frameCount, '#000');
-
-        // Name Tag
-        ctx.font = 'bold 14px "Inter", sans-serif';
-        const name = player.name || "Player";
-        const width = ctx.measureText(name).width + 20;
-        const bx = player.x + (player.w / 2) - (width / 2);
-        const by = player.y - 45;
-        ctx.fillStyle = getPlayerColor(player.id);
-        ctx.beginPath(); ctx.roundRect(bx, by, width, 26, 13); ctx.fill();
-        ctx.strokeStyle = 'rgba(0,0,0,0.1)'; ctx.lineWidth = 1; ctx.stroke();
-        ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-        ctx.fillText(name.toUpperCase(), bx + width / 2, by + 13);
-    });
-
-    ctx.restore();
-
-    drawScreenEffects(ctx, canvas.width, canvas.height);
-    renderHUD();
-    renderCountdown(ctx, canvas.width, canvas.height, Math.max(0.6, Math.min(1.0, canvas.width / 1200)));
 };
 
 const renderHUD = () => {
@@ -591,8 +683,17 @@ const renderHUD = () => {
 
     ctx.save();
     ctx.shadowBlur = 10 * hudScale; ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
-    ctx.beginPath(); ctx.roundRect(x, y, boardW, boardH, 4 * hudScale); ctx.fill();
-    ctx.shadowBlur = 0; ctx.fillStyle = '#000'; ctx.beginPath(); ctx.roundRect(x, y, 4 * hudScale, boardH, { tl: 4, bl: 4 }); ctx.fill();
+    if (ctx.roundRect) {
+        ctx.beginPath(); ctx.roundRect(x, y, boardW, boardH, 4 * hudScale); ctx.fill();
+    } else {
+        ctx.fillRect(x, y, boardW, boardH);
+    }
+    ctx.shadowBlur = 0; ctx.fillStyle = '#000';
+    if (ctx.roundRect) {
+        ctx.beginPath(); ctx.roundRect(x, y, 4 * hudScale, boardH, { tl: 4, bl: 4 }); ctx.fill();
+    } else {
+        ctx.fillRect(x, y, 4 * hudScale, boardH);
+    }
     ctx.fillStyle = '#111'; ctx.font = `900 ${Math.max(10, 14 * hudScale)}px "Inter", sans-serif`;
     ctx.fillText("STANDINGS", x + 16 * hudScale, y + 26 * hudScale);
 
@@ -601,17 +702,26 @@ const renderHUD = () => {
         if (p.id === myId) { ctx.fillStyle = 'rgba(239, 68, 68, 0.05)'; ctx.fillRect(x + 6, rowY - 22, boardW - 12, 28 * hudScale); }
         ctx.fillStyle = p.id === myId ? '#ef4444' : '#111';
         ctx.font = `${p.id === myId ? '900' : '700'} ${Math.max(9, 12 * hudScale)}px "Inter"`;
-        const name = p.name.length > 10 ? p.name.substring(0, 8) + '..' : p.name;
+        const nameText = p.name.length > 10 ? p.name.substring(0, 8) + '..' : p.name;
         ctx.textAlign = 'left';
         ctx.fillText(`${index + 1}.`, x + 16 * hudScale, rowY);
-        ctx.fillText(name.toUpperCase(), x + 40 * hudScale, rowY);
+        ctx.fillText(nameText.toUpperCase(), x + 40 * hudScale, rowY);
 
         const barW = 60 * hudScale; const barX = x + boardW - barW - 16 * hudScale;
-        ctx.fillStyle = 'rgba(0,0,0,0.05)'; ctx.beginPath(); ctx.roundRect(barX, rowY - 6, barW, 6, 3); ctx.fill();
-        const progress = Math.min(p.x / MAP_LENGTH, 1);
+        ctx.fillStyle = 'rgba(0,0,0,0.05)';
+        if (ctx.roundRect) {
+            ctx.beginPath(); ctx.roundRect(barX, rowY - 6, barW, 6, 3); ctx.fill();
+        } else {
+            ctx.fillRect(barX, rowY - 6, barW, 6);
+        }
+        const progressLife = Math.min(p.x / MAP_LENGTH, 1);
         ctx.fillStyle = p.id === myId ? '#ef4444' : '#333';
         if (p.finished) ctx.fillStyle = '#ffd700';
-        ctx.beginPath(); ctx.roundRect(barX, rowY - 6, Math.max(0, barW * progress), 6, 3); ctx.fill();
+        if (ctx.roundRect) {
+            ctx.beginPath(); ctx.roundRect(barX, rowY - 6, Math.max(0, barW * progressLife), 6, 3); ctx.fill();
+        } else {
+            ctx.fillRect(barX, rowY - 6, Math.max(0, barW * progressLife), 6);
+        }
     });
     ctx.restore();
 };

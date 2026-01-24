@@ -30,23 +30,37 @@ const generateTrack = (length = 5000) => {
     // logic for obstacles reused but adapted for linear list
     const existingObstacles = []; // Temp for collision check
 
-    // 1. Generate Obstacles
-    for (let x = 600; x < length; x += Math.random() * 800 + 500) {
+    // 1. Determine Gap Frequency based on Length (User Request)
+    // 500m (5000px) -> 2 gaps (~0.4 prob per 1000px)
+    // 1500m (15000px) -> 4 gaps (~0.27 prob per 1000px)
+    // 3000m (30000px) -> 5 gaps (~0.17 prob per 1000px)
+    let gapProbability = 0.2; // Default
+    if (length <= 5000) gapProbability = 0.35;
+    else if (length <= 15000) gapProbability = 0.24;
+    else if (length <= 32000) gapProbability = 0.15;
+
+    // 2. Generate Obstacles & Gaps
+    for (let x = 800; x < length - 800; x += Math.random() * 800 + 500) {
         // Randomly decide between an obstacle or a road break
         const roll = Math.random();
 
-        if (roll < 0.2) {
-            // Road Break Logic
+        if (roll < gapProbability) {
+            // 2. Decide Gap Type: Prioritize Ropes as the "Road Gap Feature"
             const gapTypeRoll = Math.random();
-            let type = TYPE_GAP_JUMP;
-            if (gapTypeRoll > 0.6) type = TYPE_GAP_ROPE;
-            if (gapTypeRoll > 0.9) type = TYPE_GAP_BRIDGE;
+            let type;
+            if (gapTypeRoll < 0.7) {
+                type = TYPE_GAP_ROPE; // 70% chance for Rope (The main feature)
+            } else if (gapTypeRoll < 0.9) {
+                type = TYPE_GAP_JUMP; // 20% chance for simple Jump Gap
+            } else {
+                type = TYPE_GAP_BRIDGE; // 10% chance for Bridge
+            }
 
-            // 1 out of 3 gaps should be "Mega" (impossible jump)
-            const isMegaGap = Math.random() < 0.33;
+            // 3. Size Logic: Only Ropes should be "Mega" (too wide to jump)
+            const isMegaGap = type === TYPE_GAP_ROPE;
             const gapWidth = isMegaGap
-                ? 450 + Math.random() * 200  // Mega Gap (450px - 650px)
-                : 150 + Math.random() * 100; // Normal Gap (150px - 250px)
+                ? 290 + Math.random() * 110  // Mega Gap (290px - 400px) - NEEDS ROPE
+                : 130 + Math.random() * 80;  // Normal Gap (130px - 210px) - Jumpable
 
             const gapX = Math.floor(x);
 

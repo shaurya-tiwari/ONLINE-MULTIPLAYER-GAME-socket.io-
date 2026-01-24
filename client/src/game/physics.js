@@ -32,6 +32,7 @@ export const createPlayerState = (id, name, x = 100) => ({
     y: PHYSICS_CONSTANTS.GROUND_Y - PHYSICS_CONSTANTS.PLAYER_HEIGHT_STANDING,
     w: PHYSICS_CONSTANTS.PLAYER_WIDTH,
     h: PHYSICS_CONSTANTS.PLAYER_HEIGHT_STANDING,
+    vx: 0,
     vy: 0,
     state: STATE_IDLE,
     finishTime: 0,
@@ -93,20 +94,35 @@ export const updatePlayerPhysics = (player, inputs, frameCount, raceLength = 100
     // --- 5. HORIZONTAL MOVEMENT (FORWARD & BACKWARD) ---
     const progress = Math.max(0, Math.min(1, player.x / raceLength));
     const speedMultiplier = getSpeedMultiplier(progress);
-    const currentRunSpeed = (PHYSICS_CONSTANTS.RUN_SPEED * speedMultiplier) * timeScale;
+    const baseRunSpeed = (PHYSICS_CONSTANTS.RUN_SPEED * speedMultiplier);
+
+    // Additive vx logic for rope momentum
+    if (player.vx === undefined) player.vx = 0;
 
     let isMoving = false;
     let facingLeft = (player.state & STATE_REVERSE) !== 0;
 
     if (inputs.right) {
-        player.x += currentRunSpeed;
+        player.x += baseRunSpeed * timeScale;
         facingLeft = false;
         isMoving = true;
     } else if (inputs.left) {
-        player.x -= currentRunSpeed;
+        player.x -= baseRunSpeed * timeScale;
         facingLeft = true;
         isMoving = true;
     }
+
+    // Apply Momentum (vx)
+    player.x += player.vx * timeScale;
+
+    // Decay Momentum
+    if (player.isGrounded) {
+        player.vx *= 0.85; // Faster decay on ground
+    } else {
+        player.vx *= 0.99; // Air resistance
+    }
+
+    if (Math.abs(player.vx) < 0.01) player.vx = 0;
 
     if (isMoving && player.isGrounded && frameCount % 12 === 0) {
         createRunDust(player.x, PHYSICS_CONSTANTS.GROUND_Y);
@@ -185,6 +201,10 @@ export const updatePlayerPhysics = (player, inputs, frameCount, raceLength = 100
     if ((player.state & STATE_FINISHED) !== 0) newState |= STATE_FINISHED;
     if (facingLeft) newState |= STATE_REVERSE;
     player.state = newState;
+
+    // Safety Check for NaNs
+    if (isNaN(player.x)) player.x = 100;
+    if (isNaN(player.y)) player.y = PHYSICS_CONSTANTS.GROUND_Y - PHYSICS_CONSTANTS.PLAYER_HEIGHT_STANDING;
 
     return player;
 };

@@ -10,6 +10,7 @@ export const STATE_JUMP = 1 << 1;    // 2
 export const STATE_SLIDE = 1 << 2;   // 4
 export const STATE_FINISHED = 1 << 3; // 8
 export const STATE_REVERSE = 1 << 4;  // 16 (Facing Left)
+export const STATE_ROPE = 1 << 5;     // 32 (Hanging on Rope)
 
 // Asset Types (Mapped to integers for binary encoding if needed)
 export const TYPE_TREE = 0;
