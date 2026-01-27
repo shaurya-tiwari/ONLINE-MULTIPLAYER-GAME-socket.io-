@@ -79,8 +79,8 @@ const generateTrack = (length = 15000) => {
             // 3. Size Logic: 3 Distinct Sizes for Gameplay Variety
             let gapWidth;
             if (type === TYPE_GAP_ROPE) {
-                // Large: Rope Swing Only (320px - 450px)
-                gapWidth = 320 + Math.random() * 130;
+                // Large: Rope Swing Only (260px - 380px)
+                gapWidth = 260 + Math.random() * 120;
             } else if (type === TYPE_GAP_BRIDGE) {
                 // Medium: Walkable Bridge (180px - 260px)
                 gapWidth = 180 + Math.random() * 80;
