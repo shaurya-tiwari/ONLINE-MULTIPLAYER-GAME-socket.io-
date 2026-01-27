@@ -21,7 +21,8 @@ import { createRopeInstance, updateRopePhysics, checkRopeGrab, syncPlayerToRope 
 import { getShakeOffset, triggerShake } from '../game-features/cameraShake';
 import { updateVisualEffects, drawWorldEffects, drawScreenEffects, createDustPuff } from '../game-features/visualEffects';
 import { startCountdown, updateCountdown, renderCountdown, isRaceLocked } from '../game-features/countdown';
-import { isFinalSprint } from '../game-features/playerspeedup';
+// isFinalSprint removed
+
 
 // --- 1. EVENT RING BUFFER (Zero-GC Input Handling) ---
 const MAX_EVENTS = 64;
@@ -477,7 +478,7 @@ const render = (dt) => {
 
         const me = users[myId];
         const progress = me ? me.x / MAP_LENGTH : 0;
-        const sprinting = inputs.right || isFinalSprint(progress);
+        const sprinting = inputs.right; // isFinalSprint Removed
         const { currentZoom } = updateVisualEffects(me?.vx || 0, sprinting);
         const shake = getShakeOffset();
 

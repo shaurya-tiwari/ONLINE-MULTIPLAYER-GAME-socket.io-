@@ -6,7 +6,7 @@
 
 import { triggerShake } from '../game-features/cameraShake';
 import { createDustPuff, createRunDust } from '../game-features/visualEffects';
-import { getSpeedMultiplier } from '../game-features/playerspeedup';
+// Speedup removed as per request
 import { STATE_IDLE, STATE_RUN, STATE_JUMP, STATE_SLIDE, STATE_FINISHED, STATE_REVERSE } from './dsaConstants';
 import { checkRoadBreakTraversed, findNearestGapLeft } from '../game-features/roadBreak/roadBreakLogic';
 
@@ -93,8 +93,8 @@ export const updatePlayerPhysics = (player, inputs, frameCount, raceLength = 100
 
     // --- 5. HORIZONTAL MOVEMENT (FORWARD & BACKWARD) ---
     const progress = Math.max(0, Math.min(1, player.x / raceLength));
-    const speedMultiplier = getSpeedMultiplier(progress);
-    const baseRunSpeed = (PHYSICS_CONSTANTS.RUN_SPEED * speedMultiplier);
+    // Constant Speed Enforcement
+    const baseRunSpeed = PHYSICS_CONSTANTS.RUN_SPEED;
 
     // Additive vx logic for rope momentum
     if (player.vx === undefined) player.vx = 0;
