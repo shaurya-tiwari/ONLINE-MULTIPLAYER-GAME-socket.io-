@@ -13,7 +13,7 @@ import { checkRoadBreakTraversed, findNearestGapLeft } from '../game-features/ro
 export const PHYSICS_CONSTANTS = {
     GRAVITY: 0.8,
     JUMP_FORCE: -15,
-    RUN_SPEED: 3.5,
+    RUN_SPEED: 3.7,
     GROUND_Y: 500,
     PLAYER_HEIGHT_STANDING: 60,
     PLAYER_HEIGHT_SLIDING: 30,

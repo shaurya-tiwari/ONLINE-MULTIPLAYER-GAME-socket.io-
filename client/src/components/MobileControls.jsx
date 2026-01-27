@@ -54,12 +54,25 @@ const MobileControls = () => {
     };
 
     const toggleFullscreen = () => {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen().catch(err => {
-                console.warn(`Error attempting to enable full-screen mode: ${err.message}`);
-            });
-        } else if (document.exitFullscreen) {
-            document.exitFullscreen();
+        const doc = document.documentElement;
+        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+            if (doc.requestFullscreen) {
+                doc.requestFullscreen().catch(err => console.warn(err));
+            } else if (doc.webkitRequestFullscreen) {
+                doc.webkitRequestFullscreen();
+            } else {
+                // iPhone pseudo-fullscreen fallback
+                document.body.classList.toggle('ios-pseudo-fullscreen');
+                window.scrollTo(0, 0);
+            }
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            } else {
+                document.body.classList.remove('ios-pseudo-fullscreen');
+            }
         }
     };
 
@@ -100,7 +113,7 @@ const MobileControls = () => {
     };
 
     return (
-        <div className="sketch-ui-root fixed inset-0 pointer-events-none landscape-safe-area">
+        <div className="sketch-ui-root fixed inset-0 pointer-events-none landscape-safe-area flex flex-col overflow-hidden h-[100dvh]">
             {/* Left: Run Buttons */}
             <div style={getPosStyle('mobile-run')} className="pb-6 px-6">
                 <ControlButton label="RUN" style={runBtn} action="run" scale={positions['mobile-run']?.scale || 1} opacity={positions['mobile-run']?.opacity || 1} />

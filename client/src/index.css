@@ -19,13 +19,16 @@
 
 body {
     margin: 0;
+    padding: 0;
     overflow: hidden;
     background-color: #737373;
     color: var(--ink);
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    width: 100vw;
-    height: 100vh;
-    position: fixed;
+    width: 100%;
+    height: 100dvh; /* Dynamic viewport height for iOS Safari */
+    position: fixed; /* Prevents body scrolling */
+    -webkit-text-size-adjust: 100%; /* Prevents text size changes on orientation change */
+    touch-action: manipulation; /* Removes 300ms click delay */
 }
 
 @layer components {
@@ -119,6 +122,11 @@ body {
 }
 
 /* Custom Scrollbar for Hand-drawn feel */
+.custom-scrollbar {
+    -webkit-overflow-scrolling: touch; /* Smooth momentum scrolling for iOS */
+    overflow-y: auto;
+}
+
 .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
 }
@@ -130,4 +138,14 @@ body {
 .custom-scrollbar::-webkit-scrollbar-thumb {
     background: var(--ink);
     border-radius: 10px;
+}
+
+/* iOS Fullscreen Fallback Classes */
+.ios-pseudo-fullscreen {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100dvh !important;
+    z-index: 9999 !important;
+    background: var(--paper) !important;
 }

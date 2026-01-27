@@ -9,13 +9,27 @@ const HomeScreen = ({ onHost, onJoin }) => {
     const [copied, setCopied] = useState(false);
 
     const toggleFullscreen = () => {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen().catch(err => {
-                console.warn(`Error attempting to enable full-screen mode: ${err.message}`);
-            });
+        const doc = document.documentElement;
+        if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+            // Standard Fullscreen API
+            if (doc.requestFullscreen) {
+                doc.requestFullscreen().catch(err => console.warn(err));
+            }
+            // iOS/Safari Fallback: Pseudo-Fullscreen
+            else if (doc.webkitRequestFullscreen) {
+                doc.webkitRequestFullscreen();
+            } else {
+                // If native API is completely unavailable (like iPhone), use our CSS-based fallback
+                document.body.classList.toggle('ios-pseudo-fullscreen');
+                window.scrollTo(0, 0);
+            }
         } else {
             if (document.exitFullscreen) {
                 document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            } else {
+                document.body.classList.remove('ios-pseudo-fullscreen');
             }
         }
     };
@@ -26,7 +40,7 @@ const HomeScreen = ({ onHost, onJoin }) => {
         ${isMainLogo ? 'text-6xl md:text-8xl lg:text-9xl mb-6 md:mb-0 lg:text-left text-center' : 'text-3xl md:text-5xl mb-4 md:mb-6 lg:text-left text-center'} 
         landscape:text-left landscape:mb-0 landscape:text-5xl lg:landscape:text-7xl`;
 
-    const cardStyle = "sketch-card w-full max-w-sm flex flex-col gap-6 items-center animate-fade-in py-8 px-8 z-20 landscape:py-4 landscape:gap-3 max-h-[85vh] overflow-y-auto custom-scrollbar";
+    const cardStyle = "sketch-card w-full max-w-sm flex flex-col gap-6 items-center animate-fade-in py-8 px-8 z-20 landscape:py-4 landscape:gap-3 max-h-[85vh] landscape:max-h-[85dvh] overflow-y-auto custom-scrollbar";
     const inputStyle = "w-full bg-transparent border-b-[3px] border-ink px-4 py-2 text-2xl font-black placeholder-gray-300 outline-none focus:border-marker transition-all uppercase text-center";
 
     // Primary vs Secondary Button Styles
