@@ -32,7 +32,9 @@ export const checkRoadBreakTraversed = (player, mapData) => {
             const w = mapData[offset + 3];
 
             // Player is inside the horizontal boundaries of the gap
-            if (player.x + (player.w / 2) > x && player.x + (player.w / 2) < x + w) {
+            // DSA FIX: Add Forgiveness Margin (Use narrower gap collision than visual)
+            const GAP_MARGIN = 20;
+            if (player.x + (player.w / 2) > x + GAP_MARGIN && player.x + (player.w / 2) < x + w - GAP_MARGIN) {
                 return {
                     type,
                     x,

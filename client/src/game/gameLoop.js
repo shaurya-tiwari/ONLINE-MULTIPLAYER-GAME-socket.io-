@@ -508,7 +508,7 @@ const render = (dt) => {
 
         // 2. Ground
         const groundY = 500;
-        if (!isMobile) { ctx.shadowColor = 'rgba(0,0,0,0.1)'; ctx.shadowBlur = 10; }
+        if (!isMobile) { /* Shadows Removed */ }
         ctx.strokeStyle = '#222'; ctx.lineWidth = 4;
 
         // Segmented Ground Rendering to show "Breaks"
@@ -536,7 +536,7 @@ const render = (dt) => {
         ctx.lineTo(MAP_LENGTH + 2000, groundY);
         ctx.stroke();
 
-        if (!isMobile) ctx.shadowBlur = 0;
+        if (!isMobile) { /* Shadows Removed */ }
 
         // Ground Details
         ctx.strokeStyle = '#e0e0e0'; ctx.lineWidth = 2;
@@ -592,8 +592,7 @@ const render = (dt) => {
                 if (type === TYPE_TREE) {
                     const img = getAsset('tree', i);
                     if (img) {
-                        ctx.fillStyle = 'rgba(0,0,0,0.1)';
-                        ctx.beginPath(); ctx.ellipse(x + w, groundY, w / 3, 8, 0, 0, Math.PI * 2); ctx.fill();
+                        // Shadow removed
                         ctx.drawImage(img, x, y, w, h);
                     }
                 } else if (type === TYPE_OBS_GROUND || type === TYPE_OBS_AIR) {
@@ -605,8 +604,7 @@ const render = (dt) => {
                         if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(x, y, w, h, 10); ctx.fill(); ctx.stroke(); }
                         else ctx.fillRect(x, y, w, h);
                     }
-                    ctx.fillStyle = 'rgba(0,0,0,0.15)';
-                    ctx.beginPath(); ctx.ellipse(x + w / 2, groundY, w / 2.2, 8, 0, 0, Math.PI * 2); ctx.fill();
+                    // Shadow removed
                 } else if (type === TYPE_GAP_ROPE) {
                     const anchorX = x + w / 2;
                     const anchorY = -300; // Match createRopeInstance anchorY
@@ -636,10 +634,7 @@ const render = (dt) => {
         // 4. Players
         Object.values(users).forEach(player => {
             if (isNaN(player.x) || isNaN(player.y)) return;
-            ctx.fillStyle = 'rgba(0,0,0,0.2)';
-            const distFromGround = Math.max(0, (groundY - (player.y + player.h)));
-            const shadowScale = Math.max(0.5, 1 - distFromGround / 200);
-            ctx.beginPath(); ctx.ellipse(player.x + player.w / 2, groundY, (player.w / 1.5) * shadowScale, 6 * shadowScale, 0, 0, Math.PI * 2); ctx.fill();
+            // Player Shadow removed
 
             const isHanging = (player.state & STATE_ROPE) !== 0;
             if (isHanging) ctx.globalAlpha = 0.5;
@@ -683,13 +678,13 @@ const renderHUD = () => {
     const boardH = (44 * hudScale) + (sortedPlayers.length * (32 * hudScale));
 
     ctx.save();
-    ctx.shadowBlur = 10 * hudScale; ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+    /* Shadow Removed */ ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
     if (ctx.roundRect) {
         ctx.beginPath(); ctx.roundRect(x, y, boardW, boardH, 4 * hudScale); ctx.fill();
     } else {
         ctx.fillRect(x, y, boardW, boardH);
     }
-    ctx.shadowBlur = 0; ctx.fillStyle = '#000';
+    /* Shadow Removed */ ctx.fillStyle = '#000';
     if (ctx.roundRect) {
         ctx.beginPath(); ctx.roundRect(x, y, 4 * hudScale, boardH, { tl: 4, bl: 4 }); ctx.fill();
     } else {
