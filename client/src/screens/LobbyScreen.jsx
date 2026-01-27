@@ -6,7 +6,8 @@ const LobbyScreen = ({
     onInvite,
     onStartGame,
     isHost,
-    raceLength
+    raceLength,
+    onLeave
 }) => {
     const playerList = Object.values(players || {});
     const hostPlayer = playerList.find(p => p.isHost);
@@ -25,6 +26,19 @@ const LobbyScreen = ({
 
     return (
         <div className="sketch-ui-root w-full h-full min-h-screen flex items-center justify-center p-4 md:p-6 bg-transparent overflow-hidden relative">
+            {/* Exit/Back Button */}
+            <div className="absolute top-6 left-6 pointer-events-auto landscape-safe-area z-[100]">
+                <button
+                    onClick={onLeave}
+                    className="!p-3 rounded-full bg-ink border-2 border-paper hover:bg-ink/80 transition-all group shadow-xl flex items-center justify-center"
+                    title="Leave Lobby"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={4} stroke="currentColor" className="w-6 h-6 text-paper group-hover:text-paper/70 transition-colors">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+                    </svg>
+                </button>
+            </div>
+
             <div className={cardStyle}>
 
                 {/* Room Details Badge */}

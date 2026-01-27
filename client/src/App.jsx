@@ -115,6 +115,15 @@ function App() {
         socket.emit('start_game', { code: roomCode });
     };
 
+    const handleLeaveGame = () => {
+        if (roomCode) {
+            socket.emit('leave_room', { code: roomCode });
+        }
+        setScreen('home');
+        setRoomCode('');
+        setGameMap(null);
+    };
+
     if (isLoading) {
         return (
             <div className="min-h-screen w-full flex flex-col justify-center items-center bg-[#f0f0f0] text-black">
@@ -157,6 +166,7 @@ function App() {
                     raceLength={raceLength}
                     onInvite={() => { }}
                     onStartGame={handleStartRace}
+                    onLeave={handleLeaveGame}
                 />
             )}
 
@@ -168,6 +178,7 @@ function App() {
                     players={players}
                     gameMap={gameMap}
                     raceLength={raceLength}
+                    onLeave={handleLeaveGame}
                 />
             )}
         </div>

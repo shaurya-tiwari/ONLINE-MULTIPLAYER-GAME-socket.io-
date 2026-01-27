@@ -13,9 +13,10 @@ const DEFAULT_POSITIONS = {
     'hud-main': { x: 16, y: 16, fromTop: true, fromLeft: true, scale: 1, opacity: 1 },
 };
 
-const GameScreen = ({ socket, roomCode, playerId, players, gameMap, raceLength }) => {
+const GameScreen = ({ socket, roomCode, playerId, players, gameMap, raceLength, onLeave }) => {
     const canvasRef = useRef(null);
     const [showGameOver, setShowGameOver] = useState(false);
+    const [showExitConfirm, setShowExitConfirm] = useState(false);
     const [winnerName, setWinnerName] = useState(null);
     const [positions, setPositions] = useState(DEFAULT_POSITIONS);
 
@@ -114,6 +115,19 @@ const GameScreen = ({ socket, roomCode, playerId, players, gameMap, raceLength }
                 <div className="vignette-overlay z-15" />
             </div>
 
+            {/* Exit Game Button (Top-Left) */}
+            <div className="absolute top-6 left-6 pointer-events-auto landscape-safe-area z-[100]">
+                <button
+                    onClick={() => setShowExitConfirm(true)}
+                    className="!p-3 rounded-full bg-ink border-2 border-paper hover:bg-ink/80 transition-all group shadow-xl"
+                    title="Exit Game"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={4} stroke="currentColor" className="w-6 h-6 text-paper group-hover:text-paper/70 transition-colors">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+                    </svg>
+                </button>
+            </div>
+
             {/* LAYER 2: INTERACTIVE UI */}
             <div className="absolute inset-0 z-[var(--z-hud)] pointer-events-none sketch-ui-root">
                 {/* HUD: Room Details */}
@@ -153,6 +167,33 @@ const GameScreen = ({ socket, roomCode, playerId, players, gameMap, raceLength }
                 <div className="absolute inset-0 z-30 pointer-events-none">
                     <MobileControls />
                 </div>
+
+                {/* EXIT CONFIRMATION MODAL */}
+                {showExitConfirm && (
+                    <div className="fixed inset-0 z-[var(--z-overlay)] flex items-center justify-center bg-black/40 backdrop-blur-sm p-6 pointer-events-auto sketch-ui-root">
+                        <div className="sketch-card max-w-sm w-full text-center flex flex-col gap-6 p-8 bg-paper">
+                            <div className="space-y-2">
+                                <h3 className="text-2xl font-black text-ink uppercase tracking-tight">LEAVE RACE?</h3>
+                                <p className="text-sm font-bold text-ink/60 uppercase tracking-widest">Your progress will be lost.</p>
+                            </div>
+
+                            <div className="flex flex-col gap-3">
+                                <button
+                                    onClick={onLeave}
+                                    className="btn-ink bg-marker text-paper w-full"
+                                >
+                                    QUIT TO MENU
+                                </button>
+                                <button
+                                    onClick={() => setShowExitConfirm(false)}
+                                    className="btn-ink bg-transparent text-ink/60 border-ink/20 w-full"
+                                >
+                                    STAY & RACE
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

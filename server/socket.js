@@ -46,6 +46,22 @@ module.exports = (io) => {
             }
         });
 
+        socket.on('leave_room', ({ code }) => {
+            console.log(`User ${socket.id} requested to leave room ${code}`);
+            leaveRoom(socket.id);
+            socket.leave(code);
+
+            const room = getRoom(code);
+            if (room) {
+                const playersObj = serializeRoomPlayers(room);
+                io.to(code).emit('update_room', {
+                    players: playersObj,
+                    code: code,
+                    raceLength: room.raceLength
+                });
+            }
+        });
+
         socket.on('start_game', ({ code }) => {
             const room = getRoom(code);
             if (room) {
