@@ -8,7 +8,7 @@ import { triggerShake } from '../game-features/cameraShake';
 import { createDustPuff, createRunDust } from '../game-features/visualEffects';
 import { getSpeedMultiplier } from '../game-features/playerspeedup';
 import { STATE_IDLE, STATE_RUN, STATE_JUMP, STATE_SLIDE, STATE_FINISHED, STATE_REVERSE } from './dsaConstants';
-import { checkRoadBreakTraversed } from '../game-features/roadBreak/roadBreakLogic';
+import { checkRoadBreakTraversed, findNearestGapLeft } from '../game-features/roadBreak/roadBreakLogic';
 
 export const PHYSICS_CONSTANTS = {
     GRAVITY: 0.8,
@@ -148,13 +148,21 @@ export const updatePlayerPhysics = (player, inputs, frameCount, raceLength = 100
             // Let the player fall naturally by gravity (vy will increase)
         } else {
             // Solid ground
-            if (!player.isGrounded) {
-                triggerShake(4, 10);
-                createDustPuff(player.x + player.w / 2, PHYSICS_CONSTANTS.GROUND_Y, 8);
+            // DSA FIX: Prevent "snapping" to ground if we are below it (e.g. falling into a pit)
+            // If the player is significantly below the ground level (> 60px), treat it as a fall, not a landing.
+            const SNAP_TOLERANCE = 60;
+            if (player.y - groundY > SNAP_TOLERANCE) {
+                // Too deep! Do not snap. Let gravity continue until fallThreshold resets the player.
+                player.isGrounded = false;
+            } else {
+                if (!player.isGrounded) {
+                    triggerShake(4, 10);
+                    createDustPuff(player.x + player.w / 2, PHYSICS_CONSTANTS.GROUND_Y, 8);
+                }
+                player.y = groundY;
+                player.vy = 0;
+                player.isGrounded = true;
             }
-            player.y = groundY;
-            player.vy = 0;
-            player.isGrounded = true;
         }
     } else {
         player.isGrounded = false;
@@ -164,13 +172,21 @@ export const updatePlayerPhysics = (player, inputs, frameCount, raceLength = 100
     // If player falls significantly below ground level, reset to before the gap
     const fallThreshold = PHYSICS_CONSTANTS.GROUND_Y + 500;
     if (player.y > fallThreshold) {
-        const gap = mapData ? checkRoadBreakTraversed(player, mapData) : null;
+        // DSA FIX: Smart Gap Detection
+        // 1. Check if directly inside a gap
+        let gap = mapData ? checkRoadBreakTraversed(player, mapData) : null;
+
+        // 2. If not found (drifted past edge), look for the nearest gap to the left we likely missed
+        if (!gap && mapData) {
+            gap = findNearestGapLeft(player.x, mapData);
+        }
+
         if (gap) {
             // Respawn slightly behind the gap
             player.x = gap.x - 120;
         } else {
             // Fallback safety reset
-            player.x -= 150;
+            player.x -= 250; // Increased fallback to be safer
         }
 
         // Reset vertical state to ground level

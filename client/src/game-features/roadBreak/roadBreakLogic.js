@@ -63,3 +63,46 @@ export const handleRopePhysics = (player, gap) => {
 export const handleBridgePhysics = (player, gap) => {
     // Normal ground behavior
 };
+
+/**
+ * Finds the nearest gap to the LEFT of the player.
+ * Used when a player falls but has drifted past the gap's strict X/W boundaries.
+ * 
+ * @param {number} playerX 
+ * @param {Int16Array} mapData 
+ * @returns {Object|null} Nearest gap object or null
+ */
+export const findNearestGapLeft = (playerX, mapData) => {
+    const STRIDE = 5;
+    const count = mapData.length / STRIDE;
+
+    let nearestGap = null;
+    let minDist = 1000; // Search radius (pixels)
+
+    for (let i = 0; i < count; i++) {
+        const offset = i * STRIDE;
+        const type = mapData[offset];
+
+        if (type === TYPE_GAP_JUMP || type === TYPE_GAP_ROPE || type === TYPE_GAP_BRIDGE) {
+            const x = mapData[offset + 1];
+            const w = mapData[offset + 3];
+            const gapEnd = x + w;
+
+            // We are looking for a gap where the player is to the RIGHT of it (playerX > gapEnd)
+            if (playerX > gapEnd) {
+                const dist = playerX - gapEnd;
+                if (dist < minDist) {
+                    minDist = dist;
+                    nearestGap = {
+                        type,
+                        x,
+                        w,
+                        y: mapData[offset + 2],
+                        h: mapData[offset + 4]
+                    };
+                }
+            }
+        }
+    }
+    return nearestGap;
+};
