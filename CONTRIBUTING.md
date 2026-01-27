@@ -377,24 +377,6 @@ Before submitting your PR, make sure:
 
 <br/>
 
-## ❓ Need Help?
-
-<table align="center">
-<tr>
-<td align="center" width="200">
-<img src="https://img.icons8.com/fluency/96/github.png" width="50"/><br/>
-<b>Open an Issue</b><br/>
-<sub>Label it with `question`</sub>
-</td>
-<td align="center" width="200">
-<img src="https://img.icons8.com/fluency/96/chat.png" width="50"/><br/>
-<b>Start a Discussion</b><br/>
-<sub>In GitHub Discussions</sub>
-</td>
-</tr>
-</table>
-
----
 
 <br/>
 
