@@ -141,7 +141,7 @@ Every race is unique with **procedurally generated maps** and multiple race leng
   <br/><sub>Invite friends and prepare for the race</sub>
 </td>
 <td align="center">
-  <img src="./screenshots/room.png" alt="Game Room" width="400" style="border-radius: 10px;"/>
+  <img src="./screenshots/Room.png" alt="Game Room" width="400" style="border-radius: 10px;"/>
   <br/><br/>
   <strong>🎮 Game Room</strong>
   <br/><sub>Custom settings and controls</sub>
