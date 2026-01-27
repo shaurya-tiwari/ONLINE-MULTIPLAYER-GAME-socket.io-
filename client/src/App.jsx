@@ -63,6 +63,12 @@ function App() {
             setPlayers(players);
             setRoomCode(code);
             if (serverLength) setRaceLength(serverLength);
+
+            // Correctly determine if this socket is the host
+            if (players && socket.id) {
+                setIsHost(players[socket.id]?.isHost || false);
+            }
+
             setScreen('lobby');
         };
 
@@ -108,6 +114,7 @@ function App() {
 
     const handleJoinGame = (name, code) => {
         setPlayerName(name);
+        setIsHost(false); // Reset host status immediately on join attempt
         socket.emit('join_room', { name, code });
     };
 
@@ -121,6 +128,7 @@ function App() {
         }
         setScreen('home');
         setRoomCode('');
+        setIsHost(false); // Reset host status on leave
         setGameMap(null);
     };
 

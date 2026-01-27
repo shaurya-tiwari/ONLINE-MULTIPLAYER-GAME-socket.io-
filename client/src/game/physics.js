@@ -115,11 +115,11 @@ export const updatePlayerPhysics = (player, inputs, frameCount, raceLength = 100
     // Apply Momentum (vx)
     player.x += player.vx * timeScale;
 
-    // Decay Momentum
+    // Decay Momentum (Frame-rate independent)
     if (player.isGrounded) {
-        player.vx *= 0.85; // Faster decay on ground
+        player.vx *= Math.pow(0.85, timeScale); // Faster decay on ground
     } else {
-        player.vx *= 0.99; // Air resistance
+        player.vx *= Math.pow(0.99, timeScale); // Air resistance
     }
 
     if (Math.abs(player.vx) < 0.01) player.vx = 0;
