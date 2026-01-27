@@ -11,9 +11,9 @@ import { STATE_IDLE, STATE_RUN, STATE_JUMP, STATE_SLIDE, STATE_FINISHED, STATE_R
 import { checkRoadBreakTraversed, findNearestGapLeft } from '../game-features/roadBreak/roadBreakLogic';
 
 export const PHYSICS_CONSTANTS = {
-    GRAVITY: 0.8,
+    GRAVITY: 0.85,
     JUMP_FORCE: -15,
-    RUN_SPEED: 3.7,
+    RUN_SPEED: 3.6,
     GROUND_Y: 500,
     PLAYER_HEIGHT_STANDING: 60,
     PLAYER_HEIGHT_SLIDING: 30,
