@@ -1,12 +1,39 @@
 {
-  "name": "online-game",
+  "name": "stickman-race",
   "version": "1.0.0",
+  "description": "🏃 A fast-paced online multiplayer stickman racing game built with React, Socket.IO, and Node.js",
   "main": "index.js",
   "scripts": {
+    "dev": "echo Starting both servers... && cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
+    "dev:server": "cd server && npm run dev",
+    "build": "cd client && npm run build",
+    "start": "cd server && npm start",
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": ""
+  "keywords": [
+    "game",
+    "multiplayer",
+    "stickman",
+    "racing",
+    "socket.io",
+    "react",
+    "nodejs",
+    "realtime",
+    "online-game"
+  ],
+  "author": "Shaurya Tiwari",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/shaurya-tiwari/stickman-race.git"
+  },
+  "bugs": {
+    "url": "https://github.com/shaurya-tiwari/stickman-race/issues"
+  },
+  "homepage": "https://github.com/shaurya-tiwari/stickman-race#readme",
+  "engines": {
+    "node": ">=18.0.0"
+  }
 }

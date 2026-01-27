@@ -1,16 +1,20 @@
 {
-  "name": "server",
+  "name": "stickman-race-server",
   "version": "1.0.0",
+  "description": "Backend server for Stickman Race multiplayer game",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
+  "keywords": [
+    "socket.io",
+    "multiplayer",
+    "game-server"
+  ],
+  "author": "Shaurya Tiwari",
+  "license": "MIT",
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^5.2.1",
