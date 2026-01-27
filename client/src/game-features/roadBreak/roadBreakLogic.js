@@ -26,8 +26,8 @@ export const checkRoadBreakTraversed = (player, mapData) => {
         const offset = i * STRIDE;
         const type = mapData[offset];
 
-        // Filter for Gap types
-        if (type === TYPE_GAP_JUMP || type === TYPE_GAP_ROPE || type === TYPE_GAP_BRIDGE) {
+        // Filter for Gap types (Bridge is excluded here so it acts as solid ground)
+        if (type === TYPE_GAP_JUMP || type === TYPE_GAP_ROPE) {
             const x = mapData[offset + 1];
             const w = mapData[offset + 3];
 

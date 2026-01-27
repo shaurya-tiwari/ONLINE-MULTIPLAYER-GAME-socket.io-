@@ -136,16 +136,25 @@ const handleKeyUp = (e) => {
 };
 
 export const startGameLoop = (canvasElem, socket, playerId, players, gameMap, roomCode, onGameOver, raceLengthLabel) => {
+    // 1. HARD STOP: Kill any existing loop before starting a new one
+    stopGameLoop();
+
     canvas = canvasElem;
     ctx = canvas.getContext('2d');
     myId = playerId;
 
     // DSA Fix: Handle ArrayBuffer from Socket.io
+    // Int32Array needed for longer maps (>32767px)
     if (gameMap && gameMap.byteLength && !gameMap.length) {
-        mapData = new Int16Array(gameMap);
+        mapData = new Int32Array(gameMap);
     } else {
         mapData = gameMap;
     }
+
+    // Clear persistent states
+    ropeStates.clear();
+    activeRope = null;
+    lastRopeGapId = -1;
 
     // Build Spatial Hash immediately
     if (mapData) buildSpatialHash(mapData);
@@ -261,7 +270,10 @@ const loop = (currentTime) => {
 };
 
 export const stopGameLoop = () => {
-    cancelAnimationFrame(animationFrameId);
+    if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null; // Important: Nullify ID
+    }
     window.removeEventListener('keydown', handleKeyDown);
     window.removeEventListener('keyup', handleKeyUp);
     if (canvas) canvas.removeEventListener('pointerdown', canvas.handlePointerDown);
@@ -524,6 +536,7 @@ const render = (dt) => {
             const gapW = mapData[offset + 3];
 
             // If it's a gap, draw line up to the gap start, then move to gap end
+            // Exception: Bridge gaps should be visually connected (drawn below)
             if (type === TYPE_GAP_JUMP || type === TYPE_GAP_ROPE || type === TYPE_GAP_BRIDGE) {
                 ctx.moveTo(currentX, groundY);
                 ctx.lineTo(gapX, groundY);
@@ -625,7 +638,21 @@ const render = (dt) => {
                         ctx.stroke();
                         ctx.fillStyle = '#1b110b';
                         ctx.beginPath(); ctx.arc(endX, endY, 8, 0, Math.PI * 2); ctx.fill();
+                        ctx.beginPath(); ctx.arc(endX, endY, 8, 0, Math.PI * 2); ctx.fill();
                         ctx.restore();
+                    }
+                } else if (type === TYPE_GAP_BRIDGE) {
+                    // Draw Bridge (Wooden Plank style)
+                    ctx.fillStyle = '#5d4037'; // Wood Brown
+                    if (ctx.roundRect) {
+                        ctx.beginPath(); ctx.roundRect(x - 10, y, w + 20, 15, 4); ctx.fill();
+                    } else {
+                        ctx.fillRect(x - 10, y, w + 20, 15);
+                    }
+                    // Plank Details
+                    ctx.fillStyle = '#3e2723'; // Darker Brown
+                    for (let bx = x; bx < x + w; bx += 20) {
+                        ctx.fillRect(bx, y, 2, 15);
                     }
                 }
             }

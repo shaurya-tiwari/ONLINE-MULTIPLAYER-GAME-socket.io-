@@ -2,9 +2,9 @@
 // 1m in-game is approx 10 pixels for scale
 
 const RACE_LENGTHS = {
-    "500m": 500,
-    "1500m": 1500,
-    "3000m": 3000
+    "500m": 1500,
+    "1500m": 4500,
+    "3000m": 9000
 };
 
 const DEFAULT_RACE_LENGTH = "500m";
