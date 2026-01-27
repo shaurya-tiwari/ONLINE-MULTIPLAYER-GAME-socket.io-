@@ -7,6 +7,12 @@
 </h1>
 
 <p align="center">
+  <a href="https://online-multiplayer-game-socket-io.onrender.com/">
+    <img src="https://img.shields.io/badge/🎮_PLAY_NOW-LIVE_GAME-FF6B6B?style=for-the-badge&labelColor=1a1a2e&logo=game&logoColor=white" alt="Play Now"/>
+  </a>
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/⚡_REAL--TIME-MULTIPLAYER-FF6B6B?style=for-the-badge&labelColor=1a1a2e" alt="Multiplayer"/>
   <img src="https://img.shields.io/badge/🎮_CROSS--PLATFORM-WEB_&_MOBILE-4ECDC4?style=for-the-badge&labelColor=1a1a2e" alt="Cross Platform"/>
   <img src="https://img.shields.io/badge/🚀_FAST--PACED-ACTION-FFE66D?style=for-the-badge&labelColor=1a1a2e" alt="Fast Paced"/>
