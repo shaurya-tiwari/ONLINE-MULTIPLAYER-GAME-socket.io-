@@ -93,7 +93,7 @@ module.exports = (io) => {
 
                 // Rate limit (per socket)
                 const now = Date.now();
-                if (socket.lastUpdate && now - socket.lastUpdate < 30) return;
+                if (socket.lastUpdate && now - socket.lastUpdate < 20) return;
                 socket.lastUpdate = now;
 
                 // Relay buffer to neighbors (Zero-Copy JSON parsing)

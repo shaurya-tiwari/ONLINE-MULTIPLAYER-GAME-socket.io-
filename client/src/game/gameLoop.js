@@ -84,7 +84,7 @@ const updateView = new DataView(updateBuffer);
 const updateBytes = new Uint8Array(updateBuffer);
 
 let lastEmitTime = 0;
-const EMIT_RATE = 50;
+const EMIT_RATE = 30;
 
 const remotePlayers = {};
 let lastFrameTime = performance.now();
@@ -143,9 +143,11 @@ export const startGameLoop = (canvasElem, socket, playerId, players, gameMap, ro
     ctx = canvas.getContext('2d');
     myId = playerId;
 
-    // DSA Fix: Handle ArrayBuffer from Socket.io
-    // Int32Array needed for longer maps (>32767px)
-    if (gameMap && gameMap.byteLength && !gameMap.length) {
+    // DSA Fix: Robust Map Decoding (Handles Buffer Pooling & Offset)
+    if (gameMap && gameMap.buffer) {
+        // Ensure we only read the exact slice provided by the socket
+        mapData = new Int32Array(gameMap.buffer, gameMap.byteOffset, gameMap.byteLength / 4);
+    } else if (gameMap instanceof ArrayBuffer) {
         mapData = new Int32Array(gameMap);
     } else {
         mapData = gameMap;
@@ -180,14 +182,23 @@ export const startGameLoop = (canvasElem, socket, playerId, players, gameMap, ro
 
     // DSA: Handle Binary Updates
     socket.on('player_updated', (buffer) => {
-        // Parse Binary
-        // Format: [Code(4), ID_LEN(1), ID(N), X(4), Y(4), State(1), Finished(1)]
         if (buffer instanceof ArrayBuffer || buffer instanceof Uint8Array) {
             parsePlayerUpdate(buffer);
         } else {
-            // Fallback for JSON
             handleLegacyUpdate(buffer);
         }
+    });
+
+    // DSA: Handle Real-time Room Changes (Cleanup Disconnected Players)
+    socket.on('update_room', ({ players: serverPlayers }) => {
+        if (!serverPlayers) return;
+        // Prune players who are no longer in the server list
+        Object.keys(users).forEach(id => {
+            if (id !== myId && !serverPlayers[id]) {
+                delete users[id];
+                delete remotePlayers[id];
+            }
+        });
     });
 
     cameraX = 0;
@@ -278,7 +289,10 @@ export const stopGameLoop = () => {
     window.removeEventListener('keyup', handleKeyUp);
     if (canvas) canvas.removeEventListener('pointerdown', canvas.handlePointerDown);
     document.removeEventListener('visibilitychange', document.handleVisibilityChange);
-    if (socketRef) socketRef.off('player_updated');
+    if (socketRef) {
+        socketRef.off('player_updated');
+        socketRef.off('update_room');
+    }
     ctx = null;
 };
 
@@ -627,8 +641,21 @@ const render = (dt) => {
                     if (rope) {
                         endX = rope.currentX; endY = rope.currentY;
                     } else {
-                        endX = anchorX;
-                        endY = anchorY + 720;
+                        // ROPE VISUAL SYNC: If no local simulation, check if any remote player is on this rope
+                        let attachedUser = null;
+                        Object.values(users).forEach(u => {
+                            if ((u.state & STATE_ROPE) && Math.abs(u.x - anchorX) < 300) {
+                                attachedUser = u;
+                            }
+                        });
+
+                        if (attachedUser) {
+                            endX = attachedUser.x + (attachedUser.w / 2);
+                            endY = attachedUser.y;
+                        } else {
+                            endX = anchorX;
+                            endY = anchorY + 720;
+                        }
                     }
                     if (!isNaN(endX) && !isNaN(endY)) {
                         ctx.save();

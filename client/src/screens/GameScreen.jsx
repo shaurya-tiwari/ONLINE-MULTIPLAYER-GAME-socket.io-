@@ -84,7 +84,7 @@ const GameScreen = ({ socket, roomCode, playerId, players, gameMap, raceLength, 
             socket.off('game_over', handleGameOver);
             window.removeEventListener('layout-updated', loadLayout);
         };
-    }, [socket, playerId, players, gameMap, roomCode, raceLength]);
+    }, [socket, playerId, gameMap, roomCode, raceLength]);
 
     const handleRestart = () => {
         socket.emit('restart_game', { code: roomCode });

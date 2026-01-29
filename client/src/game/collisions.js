@@ -73,8 +73,11 @@ export const handleCollisions = (player, mapData) => {
 
             if (checkAABB(player.x, player.y, player.w, player.h, ox, oy, ow, oh)) {
                 // Resolution Logic
-                if (player.x + player.w > ox && player.x < ox) {
-                    player.x = ox - player.w;
+                // Use a small buffer (5px) to prevent jitter from triggering harsh resets
+                const overlap = (player.x + player.w) - ox;
+                if (overlap > 2 && player.x < ox) {
+                    player.x -= overlap; // Push back exactly the overlap amount
+                    player.vx *= 0.1;   // Kill most momentum but not all (prevents "sudden stop" feel)
                     triggerShake(8, 15);
                     collided = true;
                 }
