@@ -296,48 +296,43 @@ export const stopGameLoop = () => {
     ctx = null;
 };
 
-// --- BINARY PARSER ---
+// --- BINARY PARSER (Quantized Snapshot) ---
 const parsePlayerUpdate = (buffer) => {
-    // Convert to DataView
     let view;
     if (buffer.buffer) view = new DataView(buffer.buffer, buffer.byteOffset, buffer.byteLength);
     else view = new DataView(buffer);
 
-    // Skip Room Code (4 bytes)
-    let offset = 4;
+    const type = view.getUint8(0);
+    if (type !== 0x01) return; // Not a batch snapshot
 
-    // Read ID Len
-    const idLen = view.getUint8(offset);
-    offset += 1;
+    const playerCount = view.getUint8(1);
+    let offset = 2;
 
-    // Read ID String
-    let id = "";
-    for (let i = 0; i < idLen; i++) {
-        id += String.fromCharCode(view.getUint8(offset + i));
+    for (let p = 0; p < playerCount; p++) {
+        const idLen = view.getUint8(offset++);
+        let id = "";
+        for (let i = 0; i < idLen; i++) {
+            id += String.fromCharCode(view.getUint8(offset++));
+        }
+
+        if (id === myId) {
+            offset += 4; // Skip X(2), Y(1), State(1)
+            continue;
+        }
+
+        if (!users[id]) {
+            users[id] = createPlayerState(id, "Player");
+            remotePlayers[id] = { current: { ...users[id] }, target: { ...users[id] }, lastUpdate: Date.now() };
+        }
+
+        const target = remotePlayers[id].target;
+        // DE-QUANTIZE: X(Uint16), Y(Uint8 offset from 300)
+        target.x = view.getUint16(offset, true); offset += 2;
+        target.y = view.getUint8(offset++) + 300;
+        target.state = view.getUint8(offset++);
+
+        remotePlayers[id].lastUpdate = Date.now();
     }
-    offset += idLen;
-
-    if (id === myId) return; // Should not happen with server relay logic, but safety
-
-    if (!users[id]) {
-        // Need name? Binary packet can include it only on first join or assume known from lobby.
-        // For physics update, we might not send name every frame.
-        // If unknown user, we might ignore or fetch.
-        // For now, auto-create:
-        users[id] = createPlayerState(id, "Player");
-        remotePlayers[id] = { current: { ...users[id] }, target: { ...users[id] }, lastUpdate: Date.now() };
-    }
-
-    const target = remotePlayers[id].target;
-    const tx = view.getFloat32(offset, true); offset += 4;
-    const ty = view.getFloat32(offset, true); offset += 4;
-    target.x = isNaN(tx) ? 100 : tx;
-    target.y = isNaN(ty) ? 440 : ty;
-    target.state = view.getUint8(offset); offset += 1;
-    const flags = view.getUint8(offset); offset += 1; // [Finished(1bit), ...]
-    target.finished = (flags & 1) === 1;
-
-    remotePlayers[id].lastUpdate = Date.now();
 };
 
 const handleLegacyUpdate = (remotePlayer) => {
@@ -455,20 +450,27 @@ const update = (dt, frameInputs) => {
             handleCollisions(player, mapData); // Uses spatial hash internally now
         }
 
-        // --- DSA: BINARY EMIT ---
+        // --- DSA: QUANTIZED BINARY EMIT ---
         if (socketRef && roomCodeRef) {
             const now = Date.now();
             if (now - lastEmitTime > EMIT_RATE) {
-                // Pack Data ...
                 let offset = 0;
+                // [RoomCode(4), ID_LEN(1), ID(N), X(2), Y(1), State(1)]
                 for (let i = 0; i < 4; i++) { updateBytes[offset++] = roomCodeRef.charCodeAt(i); }
+
                 const idLen = player.id.length;
                 updateBytes[offset++] = idLen;
                 for (let i = 0; i < idLen; i++) { updateBytes[offset++] = player.id.charCodeAt(i); }
-                updateView.setFloat32(offset, player.x, true); offset += 4;
-                updateView.setFloat32(offset, player.y, true); offset += 4;
-                updateBytes[offset++] = player.state;
-                updateBytes[offset++] = player.finished ? 1 : 0;
+
+                // QUANTIZE: X to Uint16, Y offset to Uint8
+                updateView.setUint16(offset, Math.floor(player.x), true); offset += 2;
+                updateView.setUint8(offset++, Math.floor(Math.max(0, Math.min(255, player.y - 300))));
+
+                // Pack State + Finished into one byte if needed, but we have bitmask mostly
+                let finalState = player.state;
+                if (player.finished) finalState |= STATE_FINISHED;
+                updateBytes[offset++] = finalState;
+
                 const packet = new Uint8Array(updateBuffer, 0, offset);
                 socketRef.emit('player_update', packet);
                 lastEmitTime = now;

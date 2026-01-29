@@ -1,8 +1,25 @@
 const { createRoom, joinRoom, getRoom, leaveRoom, serializeRoomPlayers } = require('./rooms');
 const { generateTrack } = require('./mapGenerator');
 const { validateRaceLength, getFinishLinePosition } = require('./raceLength');
+const worldManager = require('./worldState');
+
+// GLOBAL BROADCAST LOOP (30ms = ~33 FPS)
+// One loop for all rooms to minimize CPU overhead on VPS
+let globalIo = null;
+setInterval(() => {
+    if (!globalIo) return;
+    // We iterate through all known rooms from the worldManager (active racing rooms)
+    const activeRoomCodes = worldManager.getActiveRoomCodes();
+    activeRoomCodes.forEach(code => {
+        const snapshot = worldManager.getRoomSnapshot(code);
+        if (snapshot) {
+            globalIo.to(code).emit('player_updated', snapshot);
+        }
+    });
+}, 30);
 
 module.exports = (io) => {
+    globalIo = io;
     io.on('connection', (socket) => {
         console.log(`User Connected: ${socket.id}`);
 
@@ -50,6 +67,7 @@ module.exports = (io) => {
             console.log(`User ${socket.id} requested to leave room ${code}`);
             leaveRoom(socket.id);
             socket.leave(code);
+            worldManager.removePlayer(code, socket.id);
 
             const room = getRoom(code);
             if (room) {
@@ -81,25 +99,14 @@ module.exports = (io) => {
             }
         });
 
-        // DSA REFACTOR: Binary Player Update Handling
-        // Expects Buffer with [RoomCode(4bytes), PlayerData...]
+        // DSA REFACTOR: Binary Player Update (Cache only, no relay)
         socket.on('player_update', (data) => {
-            // Check for Binary Data
             if (Buffer.isBuffer(data) || data instanceof Uint8Array) {
-                // Manually extract Room Code (first 4 bytes ASCII) to know where to broadcast
-                // This saves sending JSON wrapper
-                const codeBuf = data.slice(0, 4);
-                const code = codeBuf.toString('utf8');
+                const code = data.slice(0, 4).toString('utf8');
 
-                // Rate limit (per socket)
-                const now = Date.now();
-                if (socket.lastUpdate && now - socket.lastUpdate < 20) return;
-                socket.lastUpdate = now;
-
-                // Relay buffer to neighbors (Zero-Copy JSON parsing)
-                socket.to(code).emit('player_updated', data);
-            } else {
-                // Fallback for JSON (Backward compatibility if needed, else ignore)
+                // Store the player update (strip room code from individual packet for snapshot)
+                const playerPayload = data.slice(4);
+                worldManager.updatePlayerState(code, socket.id, playerPayload);
             }
         });
 
@@ -114,6 +121,7 @@ module.exports = (io) => {
 
             // Reset state so new players can join
             room.gameState = 'lobby';
+            worldManager.clearRoom(code); // Clean up snapshots for race end
             io.to(code).emit('game_over', { winner: name });
             console.log(`Player ${name} won in room ${code}. State reset to lobby.`);
         });
@@ -124,6 +132,7 @@ module.exports = (io) => {
                 const pixelLength = getFinishLinePosition(room.raceLength);
                 const gameMap = generateTrack(pixelLength);
 
+                worldManager.clearRoom(code); // Reset states for new run
                 io.to(code).emit('game_restarted', {
                     gameMap: gameMap,
                     raceLength: room.raceLength
