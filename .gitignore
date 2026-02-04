@@ -39,6 +39,11 @@ Thumbs.db
 
 # Local testing
 coverage/
+test-results/
+playwright-report/
+blob-report/
+test-results.xml
 
 # Misc
 .cache/
+.agent/
