@@ -38,6 +38,7 @@ const joinRoom = (code, playerId, playerName) => {
     const room = rooms.get(code);
     if (!room) return { error: "Room not found" };
     if (room.gameState !== 'lobby') return { error: "Game already started" };
+    if (room.players.size >= 4) return { error: "Room is full (Max 4 players)" };
 
     room.players.set(playerId, {
         id: playerId,

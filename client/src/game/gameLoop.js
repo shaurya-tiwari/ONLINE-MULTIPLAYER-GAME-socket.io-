@@ -562,13 +562,13 @@ const render = (dt) => {
 
         // Final segment to infinite or track end
         ctx.moveTo(currentX, groundY);
-        ctx.lineTo(MAP_LENGTH + 2000, groundY);
+        // ctx.lineTo(MAP_LENGTH + 2000, groundY);
         ctx.stroke();
 
         if (!isMobile) { /* Shadows Removed */ }
 
         // Ground Details
-        ctx.strokeStyle = '#e0e0e0'; ctx.lineWidth = 2;
+        ctx.strokeStyle = '#b32f2fff'; ctx.lineWidth = 2;
         const startX = Math.floor(camX / 50) * 50;
         const viewWidth = canvas.width / (finalScale || 1);
         const endX = startX + viewWidth + 100;

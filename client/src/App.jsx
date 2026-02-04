@@ -9,7 +9,7 @@ import OrientationGuard from './components/OrientationGuard';
 import pageBg from './assets/page/page.jpg';
 import { preloadAllAssets } from './game/AssetLoader';
 
-const isLocal = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+const isLocal = window.location.hostname.includes("localhost") || window.location.hostname.includes("127.0.0.1") || window.location.hostname.includes("::1");
 const envUrl = import.meta.env.VITE_SERVER_URL;
 
 // On local, force localhost:3000. 
@@ -22,6 +22,7 @@ const socket = io(serverUrl, {
     transports: ["websocket"],
     reconnectionAttempts: 5
 });
+window.socket = socket;
 
 function App() {
     const [isLoading, setIsLoading] = useState(true);
@@ -36,6 +37,9 @@ function App() {
     // Use refs for stable access inside listeners
     const playerNameRef = React.useRef(playerName);
     useEffect(() => { playerNameRef.current = playerName; }, [playerName]);
+
+    const screenRef = React.useRef(screen);
+    useEffect(() => { screenRef.current = screen; }, [screen]);
 
     useEffect(() => {
         // 🚀 PRO PRELOADER: Load all assets before showing any UI
@@ -66,10 +70,16 @@ function App() {
 
             // Correctly determine if this socket is the host
             if (players && socket.id) {
-                setIsHost(players[socket.id]?.isHost || false);
+                const me = players[socket.id];
+                if (me) {
+                    setIsHost(me.isHost);
+                }
             }
 
-            setScreen('lobby');
+            // AUTO-EXIT FIX: Only switch to lobby if we are NOT in the game
+            if (screenRef.current !== 'game') {
+                setScreen('lobby');
+            }
         };
 
         const onGameStarted = ({ gameMap, raceLength: serverLength }) => {

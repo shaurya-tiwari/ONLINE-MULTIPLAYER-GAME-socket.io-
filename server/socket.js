@@ -2,6 +2,8 @@ const { createRoom, joinRoom, getRoom, leaveRoom, serializeRoomPlayers } = requi
 const { generateTrack } = require('./mapGenerator');
 const { validateRaceLength, getFinishLinePosition } = require('./raceLength');
 const worldManager = require('./worldState');
+const CompetitiveManager = require('./competitive/CompetitiveManager');
+const PlayerRegistry = require('./competitive/PlayerRegistry');
 
 // GLOBAL BROADCAST LOOP (30ms = ~33 FPS)
 // One loop for all rooms to minimize CPU overhead on VPS
@@ -71,6 +73,8 @@ module.exports = (io) => {
 
             const room = getRoom(code);
             if (room) {
+                PlayerRegistry.forceCleanup(socket.id, code, null, worldManager, io);
+
                 const playersObj = serializeRoomPlayers(room);
                 io.to(code).emit('update_room', {
                     players: playersObj,
@@ -84,10 +88,9 @@ module.exports = (io) => {
             const room = getRoom(code);
             if (room) {
                 socket.join(code);
-                const pixelLength = getFinishLinePosition(room.raceLength);
 
-                // DSA Refactor: Generate Packed Int16Array Map
-                const gameMap = generateTrack(pixelLength);
+                // Use CompetitiveManager for consistent map generation
+                const gameMap = CompetitiveManager.ensureMapConsistency(room, generateTrack);
                 room.gameState = 'racing';
 
                 // Socket.io automatically encodes TypedArrays as Buffers
@@ -113,24 +116,26 @@ module.exports = (io) => {
         socket.on('player_won', ({ code, name, x }) => {
             const room = getRoom(code);
             if (!room) return;
-            const requiredX = getFinishLinePosition(room.raceLength);
-            if (x < requiredX - 50) {
-                console.warn(`Suspicious player_won from ${name}: x=${x}`);
-                return;
-            }
 
-            // Reset state so new players can join
-            room.gameState = 'lobby';
-            worldManager.clearRoom(code); // Clean up snapshots for race end
-            io.to(code).emit('game_over', { winner: name });
-            console.log(`Player ${name} won in room ${code}. State reset to lobby.`);
+            // Use CompetitiveManager to handle Atomic Win locking and validation
+            const result = CompetitiveManager.trySetWinner(room, name, x);
+
+            if (result.success) {
+                // Reset state so new players can join
+                room.gameState = 'lobby';
+                worldManager.clearRoom(code); // Clean up snapshots for race end
+                io.to(code).emit('game_over', { winner: name });
+                console.log(`Player ${name} won in room ${code}. Winner locked: ${name}`);
+            } else {
+                console.log(`[Competitive] Rejected win for ${name}: ${result.reason}`);
+            }
         });
 
         socket.on('restart_game', ({ code }) => {
             const room = getRoom(code);
             if (room) {
-                const pixelLength = getFinishLinePosition(room.raceLength);
-                const gameMap = generateTrack(pixelLength);
+                CompetitiveManager.resetRoomState(room);
+                const gameMap = CompetitiveManager.ensureMapConsistency(room, generateTrack);
 
                 worldManager.clearRoom(code); // Reset states for new run
                 io.to(code).emit('game_restarted', {
@@ -147,6 +152,8 @@ module.exports = (io) => {
                 if (code !== socket.id) {
                     const room = getRoom(code);
                     if (room) {
+                        PlayerRegistry.forceCleanup(socket.id, code, null, worldManager, io);
+
                         const result = leaveRoom(socket.id);
                         if (result.code) {
                             // If only host left, reset to lobby
