@@ -527,6 +527,7 @@ const render = (dt) => {
 
         const zoom = isNaN(currentZoom) ? 1.0 : currentZoom;
         const finalScale = baseScale * zoom;
+        const viewWidth = canvas.width / (finalScale || 1);
         ctx.scale(finalScale, finalScale);
 
         const camX = isNaN(cameraX) ? 0 : cameraX;
@@ -534,12 +535,10 @@ const render = (dt) => {
 
         drawWorldEffects(ctx);
 
-        // 2. Ground
-        const groundY = 500;
-        if (!isMobile) { /* Shadows Removed */ }
-        ctx.strokeStyle = '#222'; ctx.lineWidth = 4;
+        const groundY = 500; // Physics height reference
 
-        // Segmented Ground Rendering to show "Breaks"
+        // --- 2. CLEAN ROAD LINE ---
+        ctx.strokeStyle = '#222'; ctx.lineWidth = 4;
         ctx.beginPath();
         let currentX = 0;
         const stride = MAP_STRIDE;
@@ -551,34 +550,18 @@ const render = (dt) => {
             const gapX = mapData[offset + 1];
             const gapW = mapData[offset + 3];
 
-            // If it's a gap, draw line up to the gap start, then move to gap end
-            // Exception: Bridge gaps should be visually connected (drawn below)
             if (type === TYPE_GAP_JUMP || type === TYPE_GAP_ROPE || type === TYPE_GAP_BRIDGE) {
                 ctx.moveTo(currentX, groundY);
                 ctx.lineTo(gapX, groundY);
                 currentX = gapX + gapW;
             }
         }
-
-        // Final segment to infinite or track end
+        // Final segment
         ctx.moveTo(currentX, groundY);
-        // ctx.lineTo(MAP_LENGTH + 2000, groundY);
+        ctx.lineTo(MAP_LENGTH + 2000, groundY);
         ctx.stroke();
 
-        if (!isMobile) { /* Shadows Removed */ }
-
-        // Ground Details
-        ctx.strokeStyle = '#b32f2fff'; ctx.lineWidth = 2;
-        const startX = Math.floor(camX / 50) * 50;
-        const viewWidth = canvas.width / (finalScale || 1);
-        const endX = startX + viewWidth + 100;
-
-        ctx.beginPath();
-        for (let x = startX; x < endX; x += 100) {
-            if (x > MAP_LENGTH + 2000) break;
-            ctx.moveTo(x, groundY); ctx.lineTo(x - 15, groundY + 15);
-        }
-        ctx.stroke();
+        // Extra details removed
 
         // 3. FINISH LINE
         const finishImg = getAsset('finish', 0);
