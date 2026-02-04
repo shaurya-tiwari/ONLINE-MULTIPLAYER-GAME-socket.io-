@@ -655,17 +655,25 @@ const render = (dt) => {
                     }
                 } else if (type === TYPE_GAP_BRIDGE) {
                     // Draw Bridge (Wooden Plank style)
+                    ctx.save();
                     ctx.fillStyle = '#5d4037'; // Wood Brown
+                    ctx.strokeStyle = '#3e2723'; ctx.lineWidth = 2;
+                    const bridgeH = 20;
                     if (ctx.roundRect) {
-                        ctx.beginPath(); ctx.roundRect(x - 10, y, w + 20, 15, 4); ctx.fill();
+                        ctx.beginPath();
+                        ctx.roundRect(x - 10, y, w + 20, bridgeH, 4);
+                        ctx.fill();
+                        ctx.stroke();
                     } else {
-                        ctx.fillRect(x - 10, y, w + 20, 15);
+                        ctx.fillRect(x - 10, y, w + 20, bridgeH);
+                        ctx.strokeRect(x - 10, y, w + 20, bridgeH);
                     }
                     // Plank Details
-                    ctx.fillStyle = '#3e2723'; // Darker Brown
-                    for (let bx = x; bx < x + w; bx += 20) {
-                        ctx.fillRect(bx, y, 2, 15);
+                    ctx.fillStyle = 'rgba(62, 39, 35, 0.4)'; // Subtle Plank Segments
+                    for (let bx = x; bx < x + w; bx += 25) {
+                        ctx.fillRect(bx, y, 3, bridgeH);
                     }
+                    ctx.restore();
                 }
             }
         }

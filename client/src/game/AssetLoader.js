@@ -15,7 +15,6 @@ const finishImagesGlob = import.meta.glob('../assets/finish/*.{png,jpg,jpeg,svg}
 
 // Background & Specials
 import stickmanStillSrc from '../assets/stickman/stickmanStill.png';
-import stickmanGifSrc from '../assets/stickman/stickman.gif';
 import pageBgSrc from '../assets/page/page.jpg';
 
 // Helpers to sort glob results
@@ -41,7 +40,6 @@ const assetCategories = {
     finish: getModules(finishImagesGlob),
     single: {
         stickmanStill: stickmanStillSrc,
-        stickmanGif: stickmanGifSrc,
         pageBg: pageBgSrc
     }
 };
@@ -69,7 +67,6 @@ const loadToCache = async (src) => {
 
 // Exports for direct access (Will be ImageBitmaps after preload)
 export let stickmanStill = null;
-export let stickmanGif = null;
 export let pageBg = pageBgSrc; // Keep str for CSS
 
 // Preload System
@@ -90,7 +87,6 @@ export const preloadAllAssets = async () => {
 
     // Sync individual exports
     stickmanStill = bitmapCache.get(stickmanStillSrc);
-    stickmanGif = bitmapCache.get(stickmanGifSrc);
 
     // console.timeEnd("Asset Preload (Bitmap)");
     return true;
