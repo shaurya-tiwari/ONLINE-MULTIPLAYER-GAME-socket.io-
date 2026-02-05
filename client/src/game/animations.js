@@ -9,8 +9,8 @@ export const drawStickman = (ctx, x, y, state, frame, color, facingRight = true)
     const width = 25;
     const height = 50;
 
-    const drawX = x - 25;
-    const drawY = y - 6 + 15;
+    const drawX = x + 7.5;
+    const drawY = y + 10;
 
     // Determine direction
     const facingLeft = (state & STATE_REVERSE) !== 0;

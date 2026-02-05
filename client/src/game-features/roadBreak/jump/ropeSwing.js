@@ -31,7 +31,7 @@ export const checkRopeGrab = (player, rope) => {
     const dy = player.y - rope.currentY;
     const dist = Math.sqrt(dx * dx + dy * dy);
 
-    return dist < 40; // Tight Grab radius for "pixel-perfect" feel
+    return dist < 30; // Tight Grab radius for "pixel-perfect" feel
 };
 
 /**
