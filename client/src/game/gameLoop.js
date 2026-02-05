@@ -321,7 +321,7 @@ const parsePlayerUpdate = (buffer) => {
         }
 
         if (!users[id]) {
-            users[id] = createPlayerState(id, "Player");
+            users[id] = createPlayerState(id, "Athlete");
             remotePlayers[id] = { current: { ...users[id] }, target: { ...users[id] }, lastUpdate: Date.now() };
         }
 
@@ -689,7 +689,7 @@ const render = (dt) => {
             if (isHanging) ctx.globalAlpha = 1.0;
 
             ctx.font = 'bold 14px "Inter", sans-serif';
-            const name = player.name || "Player";
+            const name = player.name || "Athlete";
             const widthText = ctx.measureText(name).width + 20;
             const bx = player.x + (player.w / 2) - (widthText / 2);
             const by = player.y - 45;

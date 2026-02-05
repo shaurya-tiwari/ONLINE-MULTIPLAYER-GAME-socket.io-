@@ -364,6 +364,8 @@ Before submitting your PR, make sure:
 | 🏃 **Gameplay** | ✅ Movement works |
 | 📱 **Mobile** | ✅ Touch controls work |
 | 🔄 **Multiplayer** | ✅ Players sync correctly |
+| 🏆 **Winner Page** | ✅ Displays correct name |
+| 🔄 **Host Restart** | ✅ Restarts with new map |
 | 🚫 **No Errors** | ✅ Console is clean |
 
 ### Testing Multiplayer

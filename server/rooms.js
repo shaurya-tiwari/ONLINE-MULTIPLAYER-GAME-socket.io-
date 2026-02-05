@@ -10,7 +10,7 @@ const createRoomStruct = (code, hostId, hostName, raceLength) => ({
     host: hostId,
     raceLength,
     // players uses Map for O(1) access
-    players: new Map([[hostId, { id: hostId, name: hostName, isHost: true }]]),
+    players: new Map([[hostId, { id: hostId, name: hostName || "Athlete", isHost: true }]]),
     gameState: 'lobby' // lobby, racing
 });
 
@@ -42,7 +42,7 @@ const joinRoom = (code, playerId, playerName) => {
 
     room.players.set(playerId, {
         id: playerId,
-        name: playerName,
+        name: playerName || "Athlete",
         isHost: false
     });
     playerToRoom.set(playerId, code);

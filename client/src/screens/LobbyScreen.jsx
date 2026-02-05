@@ -53,7 +53,7 @@ const LobbyScreen = ({
                     </div>
                     <div className="flex flex-col items-end">
                         <span className="text-[9px] font-black text-marker uppercase tracking-widest">Captain</span>
-                        <span className="text-xs font-black text-ink truncate max-w-[80px]">{hostPlayer?.name || '...'}</span>
+                        <span className="text-xs font-black text-ink truncate max-w-[80px]">{hostPlayer?.name || 'Athlete'}</span>
                     </div>
                 </div>
 
@@ -90,7 +90,7 @@ const LobbyScreen = ({
                                     </div>
                                     <div>
                                         <p className={`font-black uppercase tracking-tight ${player.isHost ? 'text-xl' : 'text-lg opacity-80'}`}>
-                                            {player.name}
+                                            {player.name || "Athlete"}
                                         </p>
                                         {player.isHost && <p className="text-[9px] font-black italic -mt-1 opacity-50 uppercase tracking-tighter">Captain</p>}
                                     </div>

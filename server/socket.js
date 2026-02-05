@@ -134,15 +134,22 @@ module.exports = (io) => {
         socket.on('restart_game', ({ code }) => {
             const room = getRoom(code);
             if (room) {
+                // Security: Only host can restart
+                if (room.host !== socket.id) {
+                    console.log(`[Competitive] Rejected restart in ${code}: Non-host ${socket.id} attempted restart`);
+                    return;
+                }
+
                 CompetitiveManager.resetRoomState(room);
                 const gameMap = CompetitiveManager.ensureMapConsistency(room, generateTrack);
+                room.gameState = 'racing'; // Set back to racing so others can't join and physics works
 
                 worldManager.clearRoom(code); // Reset states for new run
                 io.to(code).emit('game_restarted', {
                     gameMap: gameMap,
                     raceLength: room.raceLength
                 });
-                console.log(`Game restarted in room ${code}`);
+                console.log(`Game restarted in room ${code} by host ${socket.id}`);
             }
         });
 

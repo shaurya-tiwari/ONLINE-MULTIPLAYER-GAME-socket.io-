@@ -49,6 +49,7 @@ const GameScreen = ({ socket, roomCode, playerId, players, gameMap, raceLength, 
         setWinnerName(null);
 
         const handleGameOver = ({ winner }) => {
+            console.log("[GameScreen] Game Over received. Winner:", winner);
             setWinnerName(winner);
             setShowGameOver(true);
             stopGameLoop();
