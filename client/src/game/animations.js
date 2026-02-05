@@ -6,11 +6,11 @@ import { STATE_IDLE, STATE_RUN, STATE_JUMP, STATE_SLIDE, STATE_ROPE, STATE_REVER
 
 export const drawStickman = (ctx, x, y, state, frame, color, facingRight = true) => {
     // Dimensions
-    const width = 30;
-    const height = 70;
+    const width = 25;
+    const height = 50;
 
     const drawX = x - 25;
-    const drawY = y - 25 + 15;
+    const drawY = y - 6 + 15;
 
     // Determine direction
     const facingLeft = (state & STATE_REVERSE) !== 0;
