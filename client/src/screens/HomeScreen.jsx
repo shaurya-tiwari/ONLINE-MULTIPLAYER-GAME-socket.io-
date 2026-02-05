@@ -8,6 +8,32 @@ const HomeScreen = ({ onHost, onJoin }) => {
     const [raceLength, setRaceLength] = useState('500m');
     const [copied, setCopied] = useState(false);
 
+    const requestLandscape = async () => {
+        try {
+            // 1. Try to enter fullscreen if not already (often required for orientation lock)
+            const doc = document.documentElement;
+            if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+                if (doc.requestFullscreen) await doc.requestFullscreen().catch(() => { });
+                else if (doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
+            }
+
+            // 2. Try to lock orientation to landscape
+            if (screen.orientation && screen.orientation.lock) {
+                await screen.orientation.lock('landscape').catch(err => {
+                    console.warn("Orientation lock failed:", err);
+                });
+            } else if (screen.lockOrientation) {
+                screen.lockOrientation('landscape');
+            } else if (screen.webkitLockOrientation) {
+                screen.webkitLockOrientation('landscape');
+            } else if (screen.mozLockOrientation) {
+                screen.mozLockOrientation('landscape');
+            }
+        } catch (err) {
+            console.warn("Orientation request error:", err);
+        }
+    };
+
     const toggleFullscreen = () => {
         const doc = document.documentElement;
         if (!document.fullscreenElement && !document.webkitFullscreenElement) {
@@ -23,6 +49,8 @@ const HomeScreen = ({ onHost, onJoin }) => {
                 document.body.classList.toggle('ios-pseudo-fullscreen');
                 window.scrollTo(0, 0);
             }
+            // Also try to lock landscape when maximizing
+            requestLandscape();
         } else {
             if (document.exitFullscreen) {
                 document.exitFullscreen();
@@ -100,7 +128,12 @@ const HomeScreen = ({ onHost, onJoin }) => {
             </div>
 
             <button
-                onClick={() => name && onHost(name, raceLength)}
+                onClick={() => {
+                    if (name) {
+                        requestLandscape();
+                        onHost(name, raceLength);
+                    }
+                }}
                 disabled={!name}
                 className={`${primaryButtonStyle} mt-2 w-full ${!name ? 'opacity-20 grayscale pointer-events-none' : ''}`}
             >
@@ -147,7 +180,12 @@ const HomeScreen = ({ onHost, onJoin }) => {
             </div>
 
             <button
-                onClick={() => name && code && onJoin(name, code)}
+                onClick={() => {
+                    if (name && code) {
+                        requestLandscape();
+                        onJoin(name, code);
+                    }
+                }}
                 disabled={!name || !code}
                 className={`${primaryButtonStyle} mt-2 w-full ${!name || !code ? 'opacity-20 grayscale pointer-events-none' : ''}`}
             >

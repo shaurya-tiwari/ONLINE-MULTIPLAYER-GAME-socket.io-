@@ -5,7 +5,6 @@ import LobbyScreen from './screens/LobbyScreen';
 import GameScreen from './screens/GameScreen';
 import SettingsPanel from './components/settings/SettingsPanel';
 import LayoutEditor from './components/settings/LayoutEditor';
-import OrientationGuard from './components/OrientationGuard';
 import pageBg from './assets/page/page.jpg';
 import { preloadAllAssets } from './game/AssetLoader';
 
@@ -154,51 +153,52 @@ function App() {
     }
 
     return (
-        <div
-            className="min-h-screen w-full flex justify-center items-center text-black overflow-hidden selection:bg-blue-500/30"
-            style={{
-                backgroundImage: `url(${pageBg})`,
-                backgroundRepeat: 'no-repeat',
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-                backgroundAttachment: 'fixed'
-            }}
-        >
-            <LayoutEditor />
-            {screen !== 'game' && <SettingsPanel />}
-            <OrientationGuard />
-            {screen === 'home' && (
-                <HomeScreen
-                    onHost={handleStartHost}
-                    onJoin={(name, code) => {
-                        handleJoinGame(name, code);
-                    }}
-                />
-            )}
+        <div className="force-landscape-container">
+            <div
+                className="min-h-screen w-full flex justify-center items-center text-black overflow-hidden selection:bg-blue-500/30"
+                style={{
+                    backgroundImage: `url(${pageBg})`,
+                    backgroundRepeat: 'no-repeat',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundAttachment: 'fixed'
+                }}
+            >
+                <LayoutEditor />
+                {screen !== 'game' && <SettingsPanel />}
+                {screen === 'home' && (
+                    <HomeScreen
+                        onHost={handleStartHost}
+                        onJoin={(name, code) => {
+                            handleJoinGame(name, code);
+                        }}
+                    />
+                )}
 
-            {screen === 'lobby' && (
-                <LobbyScreen
-                    roomCode={roomCode}
-                    players={players}
-                    isHost={isHost}
-                    raceLength={raceLength}
-                    onInvite={() => { }}
-                    onStartGame={handleStartRace}
-                    onLeave={handleLeaveGame}
-                />
-            )}
+                {screen === 'lobby' && (
+                    <LobbyScreen
+                        roomCode={roomCode}
+                        players={players}
+                        isHost={isHost}
+                        raceLength={raceLength}
+                        onInvite={() => { }}
+                        onStartGame={handleStartRace}
+                        onLeave={handleLeaveGame}
+                    />
+                )}
 
-            {screen === 'game' && (
-                <GameScreen
-                    socket={socket}
-                    roomCode={roomCode}
-                    playerId={socket.id}
-                    players={players}
-                    gameMap={gameMap}
-                    raceLength={raceLength}
-                    onLeave={handleLeaveGame}
-                />
-            )}
+                {screen === 'game' && (
+                    <GameScreen
+                        socket={socket}
+                        roomCode={roomCode}
+                        playerId={socket.id}
+                        players={players}
+                        gameMap={gameMap}
+                        raceLength={raceLength}
+                        onLeave={handleLeaveGame}
+                    />
+                )}
+            </div>
         </div>
     );
 }
