@@ -61,6 +61,15 @@ module.exports = (io) => {
                     code: code,
                     raceLength: result.room.raceLength
                 });
+
+                // HOST FIX: Explicitly update the host to ensure they see the new player immediately
+                if (result.room.host && result.room.host !== socket.id) {
+                    io.to(result.room.host).emit('update_room', {
+                        players: playersObj,
+                        code: code,
+                        raceLength: result.room.raceLength
+                    });
+                }
                 console.log(`${name} (${socket.id}) joined room ${code}. Total players: ${result.room.players.size}`);
             }
         });

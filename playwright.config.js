@@ -22,4 +22,12 @@ module.exports = defineConfig({
             use: { ...devices['Desktop Chrome'] },
         },
     ],
+
+    /* Run your local dev server before starting the tests */
+    webServer: {
+        command: 'npm start',  // Starts the express server (which serves the built client)
+        url: 'http://localhost:3000',
+        reuseExistingServer: !process.env.CI,
+        timeout: 120 * 1000,
+    },
 });

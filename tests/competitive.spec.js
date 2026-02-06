@@ -42,11 +42,11 @@ test.describe('Competitive Logic Verification', () => {
         console.log('Simulating simultaneous win via socket injection...');
 
         const winPromise1 = hostPage.evaluate(async ({ roomCode, name }) => {
-            window.socket.emit('player_won', { code: roomCode, name, x: 20000 });
+            window.socket.emit('player_won', { code: roomCode, name, x: 50000 });
         }, { roomCode, name: 'HostUser' });
 
         const winPromise2 = joinerPage.evaluate(async ({ roomCode, name }) => {
-            window.socket.emit('player_won', { code: roomCode, name, x: 20000 });
+            window.socket.emit('player_won', { code: roomCode, name, x: 50000 });
         }, { roomCode, name: 'JoinerUser' });
 
         await Promise.all([winPromise1, winPromise2]);
