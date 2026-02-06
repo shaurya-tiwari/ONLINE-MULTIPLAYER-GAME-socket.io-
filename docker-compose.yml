@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  app:
+    # Use the Dockerfile in the current directory
+    build: .
+    # Map port 3000 on your laptop to port 3000 in the container
+    ports:
+      - "8080:3000"
+    # Set environment variables if needed
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    # Restart automatically if it crashes
+    restart: always

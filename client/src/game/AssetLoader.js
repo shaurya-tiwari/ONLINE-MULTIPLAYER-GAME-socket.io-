@@ -14,7 +14,7 @@ const slideImagesGlob = import.meta.glob('../assets/slide/*.{png,jpg,jpeg,svg}',
 const finishImagesGlob = import.meta.glob('../assets/finish/*.{png,jpg,jpeg,svg}', { eager: true });
 
 // Background & Specials
-import stickmanStillSrc from '../assets/stickman/stickmanStill.png';
+import stickmanStillSrc from '../assets/stickman/StickmanStill.png';
 import pageBgSrc from '../assets/page/page.jpg';
 
 // Helpers to sort glob results

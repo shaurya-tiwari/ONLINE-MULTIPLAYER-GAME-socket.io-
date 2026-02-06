@@ -26,6 +26,7 @@
   <img src="https://img.shields.io/badge/Socket.IO-4.8.3-010101?style=for-the-badge&logo=socket.io&logoColor=white" alt="Socket.IO"/>
   <img src="https://img.shields.io/badge/Node.js-Express_5-339933?style=for-the-badge&logo=node.js&logoColor=white" alt="Node.js"/>
   <img src="https://img.shields.io/badge/Tailwind-3.4.4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="Tailwind"/>
+  <img src="https://img.shields.io/badge/Docker-Enabled-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker"/>
 </p>
 
 <p align="center">
@@ -176,72 +177,52 @@ Every race is unique with **procedurally generated maps** and multiple race leng
 
 <br/>
 
-## 🚀 Quick Start
+## 🚀 How to Run
 
-<table>
-<tr>
-<td>
+You can run this game in two ways. Choose the one you prefer!
 
-### 📦 Prerequisites
+### Option 1: The Docker Way (Recommended 🐳)
+*No need to install Node.js! Just requires Docker Desktop.*
 
-```bash
-Node.js 18+
-npm
-```
+1.  **Clone the repo**:
+    ```bash
+    git clone https://github.com/shaurya-tiwari/stickman-race.git
+    cd stickman-race
+    ```
+2.  **Run with one command** (Command Prompt or Terminal):
+    ```bash
+    docker compose up
+    ```
+3.  **Play**: Open `http://localhost:8080` in your browser.
 
-</td>
-<td>
+> **Note**: If you want to run it in the background, use `docker compose up -d`.
 
-### ⬇️ Clone
+---
 
-```bash
-git clone https://github.com/shaurya-tiwari/stickman-race.git
-cd stickman-race
-```
+### Option 2: The Manual Way (Node.js)
+*Requires Node.js v18+ installed on your machine.*
 
-</td>
-</tr>
-</table>
+1.  **Clone the repo**:
+    ```bash
+    git clone https://github.com/shaurya-tiwari/stickman-race.git
+    cd stickman-race
+    ```
 
-### 📥 Install Dependencies
+2.  **Install & Run Server**:
+    ```bash
+    cd server
+    npm install
+    npm run dev
+    ```
 
-```bash
-# Server
-cd server && npm install
+3.  **Install & Run Client** (New Terminal):
+    ```bash
+    cd client
+    npm install
+    npm run dev
+    ```
 
-# Client  
-cd ../client && npm install
-```
-
-### ▶️ Run the Game
-
-<table>
-<tr>
-<td width="50%">
-
-**🖥️ Terminal 1 — Server**
-```bash
-cd server
-npm run dev
-```
-
-</td>
-<td width="50%">
-
-**🌐 Terminal 2 — Client**
-```bash
-cd client
-npm run dev
-```
-
-</td>
-</tr>
-</table>
-
-<p align="center">
-  <br/>
-  <img src="https://img.shields.io/badge/Open_in_Browser-http://localhost:5173-4ECDC4?style=for-the-badge" alt="localhost"/>
-</p>
+4.  **Play**: Open `http://localhost:5173` (or whatever Vite shows).
 
 ---
 
@@ -271,6 +252,10 @@ npm run dev
 <img src="https://skillicons.dev/icons?i=express" width="50" /><br/>
 <b>Express</b>
 </td>
+<td align="center" width="140">
+<img src="https://skillicons.dev/icons?i=docker" width="50" /><br/>
+<b>Docker</b>
+</td>
 </tr>
 </table>
 
@@ -288,6 +273,7 @@ npm run dev
 | | Express | 5.2.1 | Server |
 | | Socket.IO | 4.8.3 | WebSockets |
 | | CORS | 2.8.5 | Security |
+| **DevOps** | Docker | Latest | Containerization |
 
 ---
 

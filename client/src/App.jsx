@@ -11,9 +11,9 @@ import { preloadAllAssets } from './game/AssetLoader';
 const isLocal = window.location.hostname.includes("localhost") || window.location.hostname.includes("127.0.0.1") || window.location.hostname.includes("::1");
 const envUrl = import.meta.env.VITE_SERVER_URL;
 
-// On local, force localhost:3000. 
-// On prod, use envUrl if it's not localhost, otherwise auto-connect (undefined).
-const serverUrl = isLocal
+// On local dev (Vite), we must point to port 3000.
+// In Docker/Prod (Vite build), we are served from the same origin, so undefined = auto-connect.
+const serverUrl = import.meta.env.DEV
     ? "http://localhost:3000"
     : (envUrl && !envUrl.includes("localhost") ? envUrl : undefined);
 
