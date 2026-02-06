@@ -2,7 +2,7 @@
 # STAGE 1: Build the React Frontend
 # ==========================================
 # We use a Node image to build the client assets
-FROM node:18-alpine as client-builder
+FROM node:18-alpine AS client-builder
 
 # Set working directory for the build
 WORKDIR /app/client
