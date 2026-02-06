@@ -17,7 +17,7 @@ jobs:
     
     # Install dependencies
     - name: Install dependencies
-      run: npm install
+      run: npm install && cd client && npm install
 
     # Install Playwright Browsers (Required for tests to run)
     - name: Install Playwright Browsers
