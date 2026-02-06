@@ -90,11 +90,6 @@ Every race is unique with **procedurally generated maps** and multiple race leng
 <br/><strong>📱 Mobile Ready</strong>
 <br/><sub>Touch controls included</sub>
 </td>
-<td align="center" width="25%">
-<img src="https://img.icons8.com/fluency/96/000000/leaderboard.png" width="60"/>
-<br/><strong>🏅 Live Rankings</strong>
-<br/><sub>Real-time leaderboard</sub>
-</td>
 </tr>
 </table>
 
