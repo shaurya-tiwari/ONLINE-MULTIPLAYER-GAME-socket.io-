@@ -411,7 +411,7 @@ graph LR
 This project's **source code** is licensed under the **MIT License**.
 However, this license **does NOT cover the visual assets** used in this project.
 
-### 🎨 Asset Disclaimers
+###Asset Disclaimers
 - **Images & Textures**: Some background images and textures were sourced from **Pinterest** and other public mood-board platforms. These are used for educational/demonstration purposes only. All rights belong to their original creators.
 - **Stickman Character**: The stickman character sprites and animations were **AI Generated using Gemini**, and are used here under the applicable generative AI usage guidelines.
 
