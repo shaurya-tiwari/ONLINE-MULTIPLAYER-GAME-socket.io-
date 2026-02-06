@@ -401,6 +401,24 @@ graph LR
   <img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=6,11,20&height=100&section=footer" width="100%"/>
 </p>
 
+
+---
+
+<br/>
+
+## ⚖️ License & Attributions
+
+This project's **source code** is licensed under the **MIT License**.
+However, this license **does NOT cover the visual assets** used in this project.
+
+### 🎨 Asset Disclaimers
+- **Images & Textures**: Some background images and textures were sourced from **Pinterest** and other public mood-board platforms. These are used for educational/demonstration purposes only. All rights belong to their original creators.
+- **Stickman Character**: The stickman character sprites and animations were **AI Generated using Gemini**, and are used here under the applicable generative AI usage guidelines.
+
+If you are the copyright holder of any asset used here and would like it removed, please contact me and I will remove it immediately.
+
+<br/>
+
 <p align="center">
   <b>Made with ❤️ by Shaurya Tiwari</b>
 </p>
