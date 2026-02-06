@@ -89,13 +89,14 @@ const MobileControls = () => {
             onPointerUp={(e) => { e.preventDefault(); handleAction(action, false); }}
             onPointerCancel={(e) => { e.preventDefault(); handleAction(action, false); }}
             onPointerLeave={(e) => { e.preventDefault(); handleAction(action, false); }}
+            onContextMenu={(e) => e.preventDefault()}
             style={{
                 touchAction: 'none',
                 transform: `scale(${scale})`,
                 opacity: opacity
             }}
         >
-            <span className="relative z-10 uppercase tracking-tighter font-black">
+            <span className="relative z-10 uppercase tracking-tighter font-black select-none pointer-events-none">
                 {label === 'BACK' ? (
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={4} stroke="currentColor" className="w-8 h-8">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
@@ -132,9 +133,10 @@ const MobileControls = () => {
             <div className="absolute bottom-10 left-1/2 -translate-x-1/2 pb-4">
                 <button
                     onClick={toggleFullscreen}
-                    className="btn-ink pointer-events-auto bg-paper/60 text-ink/80 border-ink/20 text-[11px] sm:text-sm px-6 py-2.5 rounded-full relative transform rotate-1 hover:bg-paper/90 shadow-md"
+                    onContextMenu={(e) => e.preventDefault()}
+                    className="btn-ink !w-auto pointer-events-auto bg-paper/60 text-ink/80 border-ink/20 text-[11px] sm:text-sm px-6 py-2.5 rounded-full relative transform rotate-1 hover:bg-paper/90 shadow-md select-none"
                 >
-                    <span className="relative z-10 tracking-[0.2em] font-black uppercase flex items-center gap-2">
+                    <span className="relative z-10 tracking-[0.2em] font-black uppercase flex items-center gap-2 pointer-events-none">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" /></svg>
                         MAXIMIZE
                     </span>

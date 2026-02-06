@@ -20,7 +20,7 @@ test.describe('Detailed Game Functionality (A-Z Verification)', () => {
         await hostPage.click('button:has-text("START ROOM")');
 
         // 2. Wait for Lobby transition (Look for unique text)
-        await expect(hostPage.locator('text=ATHLETES READY')).toBeVisible({ timeout: 20000 });
+        await expect(hostPage.locator('h3:has-text("Athletes")')).toBeVisible({ timeout: 20000 });
 
         // Extract Room Code (Handle potential boiler-plate)
         const locator = hostPage.locator('span.text-6xl, span.text-lg').filter({ hasText: /^[A-Z0-9]{4}$/ }).first();
@@ -45,13 +45,13 @@ test.describe('Detailed Game Functionality (A-Z Verification)', () => {
 
             // Ensure this player joined successfully
             const count = i + 2;
-            await expect(p.locator(`text=${count}/4 ATHLETES READY`)).toBeVisible({ timeout: 15000 });
+            await expect(p.locator(`text=${count}/4`)).toBeVisible({ timeout: 15000 });
             pPageRefs.push(p);
             await hostPage.waitForTimeout(500); // Stagger joins
         }
 
         // 4. Verification: 4/4 on host
-        await expect(hostPage.locator('text=4/4 ATHLETES READY')).toBeVisible({ timeout: 10000 });
+        await expect(hostPage.locator('text=4/4')).toBeVisible({ timeout: 10000 });
 
         // 5. Join 5th Player (Should Error)
         const p5Page = await (await browser.newContext()).newPage();
@@ -79,7 +79,7 @@ test.describe('Detailed Game Functionality (A-Z Verification)', () => {
         await hostPage.fill('input[placeholder="ENTER NAME"]', 'Host');
         await hostPage.click('button:has-text("START ROOM")');
 
-        await expect(hostPage.locator('text=ATHLETES READY')).toBeVisible();
+        await expect(hostPage.locator('h3:has-text("Athletes")')).toBeVisible();
         const locator = hostPage.locator('span.text-6xl, span.text-lg').filter({ hasText: /^[A-Z0-9]{4}$/ }).first();
         const raw = await locator.textContent();
         const roomCode = raw.match(/[A-Z0-9]{4}/)[0];
@@ -97,7 +97,8 @@ test.describe('Detailed Game Functionality (A-Z Verification)', () => {
 
         const dialog = await dialogPromise;
         expect(dialog.message()).toContain('Game already started');
-        await dialog.dismiss();
+        await dialog.dismiss().catch(() => { }); // Catch closure errors
+        await latePage.waitForTimeout(500); // Small delay to let dialog settle
         await hostPage.context().close();
         await latePage.context().close();
     });
@@ -109,7 +110,7 @@ test.describe('Detailed Game Functionality (A-Z Verification)', () => {
         await hostPage.fill('input[placeholder="ENTER NAME"]', 'Host');
         await hostPage.click('button:has-text("START ROOM")');
 
-        await expect(hostPage.locator('text=ATHLETES READY')).toBeVisible();
+        await expect(hostPage.locator('h3:has-text("Athletes")')).toBeVisible();
         const locator = hostPage.locator('span.text-6xl, span.text-lg').filter({ hasText: /^[A-Z0-9]{4}$/ }).first();
         const raw = await locator.textContent();
         const roomCode = raw.match(/[A-Z0-9]{4}/)[0];

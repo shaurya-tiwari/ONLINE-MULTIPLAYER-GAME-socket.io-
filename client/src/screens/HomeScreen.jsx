@@ -130,7 +130,6 @@ const HomeScreen = ({ onHost, onJoin }) => {
             <button
                 onClick={() => {
                     if (name) {
-                        requestLandscape();
                         onHost(name, raceLength);
                     }
                 }}
@@ -182,7 +181,6 @@ const HomeScreen = ({ onHost, onJoin }) => {
             <button
                 onClick={() => {
                     if (name && code) {
-                        requestLandscape();
                         onJoin(name, code);
                     }
                 }}
@@ -204,10 +202,10 @@ const HomeScreen = ({ onHost, onJoin }) => {
             <div className="vignette-overlay" />
 
             {/* Top Right Controls - Fullscreen */}
-            <div className="absolute top-4 right-4 z-[var(--z-overlay)]">
+            <div className="absolute top-4 right-4 z-[var(--z-overlay)] pointer-events-none">
                 <button
                     onClick={toggleFullscreen}
-                    className="btn-ink bg-white/50 text-ink border-ink text-[10px] px-3 py-1.5 hover:bg-white transform -rotate-1 transition-all active:scale-95 shadow-sm font-black tracking-widest"
+                    className="btn-ink !w-auto pointer-events-auto bg-white/50 text-ink border-ink text-[10px] px-3 py-1.5 hover:bg-white transform -rotate-1 transition-all active:scale-95 shadow-sm font-black tracking-widest"
                     style={{ minHeight: 'auto' }}
                 >
                     MAXIMIZE

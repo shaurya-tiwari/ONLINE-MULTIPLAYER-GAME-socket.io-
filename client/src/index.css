@@ -25,10 +25,14 @@ body {
     color: var(--ink);
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     width: 100%;
-    height: 100dvh; /* Dynamic viewport height for iOS Safari */
-    position: fixed; /* Prevents body scrolling */
-    -webkit-text-size-adjust: 100%; /* Prevents text size changes on orientation change */
-    touch-action: manipulation; /* Removes 300ms click delay */
+    height: 100dvh;
+    /* Dynamic viewport height for iOS Safari */
+    position: fixed;
+    /* Prevents body scrolling */
+    -webkit-text-size-adjust: 100%;
+    /* Prevents text size changes on orientation change */
+    touch-action: manipulation;
+    /* Removes 300ms click delay */
 }
 
 @layer components {
@@ -83,6 +87,9 @@ body {
         color: var(--ink);
         line-height: 1.2;
         user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
         -webkit-tap-highlight-color: transparent;
     }
 
@@ -123,7 +130,8 @@ body {
 
 /* Custom Scrollbar for Hand-drawn feel */
 .custom-scrollbar {
-    -webkit-overflow-scrolling: touch; /* Smooth momentum scrolling for iOS */
+    -webkit-overflow-scrolling: touch;
+    /* Smooth momentum scrolling for iOS */
     overflow-y: auto;
 }
 

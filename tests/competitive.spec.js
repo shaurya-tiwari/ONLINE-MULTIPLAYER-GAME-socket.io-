@@ -27,7 +27,7 @@ test.describe('Competitive Logic Verification', () => {
         await joinerPage.fill('input[placeholder="CODE"]', roomCode);
         await joinerPage.click('button:has-text("JOIN RACE")');
 
-        await expect(joinerPage.locator(`text=${roomCode}`)).toBeVisible({ timeout: 15000 });
+        await expect(joinerPage.locator(`text=${roomCode}`).first()).toBeVisible({ timeout: 15000 });
 
         // 2. Start Race
         console.log('Host: Launching Race...');
@@ -65,7 +65,7 @@ test.describe('Competitive Logic Verification', () => {
 
         // After clicking PLAY AGAIN, the game restarts and we should see the HUD or something
         // To verify we are back in a functional state, let's just check the HUD room code is visible
-        await expect(hostPage.locator(`text=${roomCode}`)).toBeVisible({ timeout: 15000 });
+        await expect(hostPage.locator(`text=${roomCode}`).first()).toBeVisible({ timeout: 15000 });
 
         console.log('Success: Atomic Win verified!');
 

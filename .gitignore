@@ -43,6 +43,7 @@ test-results/
 playwright-report/
 blob-report/
 test-results.xml
+test_fail_*.txt
 
 # Misc
 .cache/

@@ -83,6 +83,7 @@ function App() {
 
         const onGameStarted = ({ gameMap, raceLength: serverLength }) => {
             console.log("Game Started! Map received.");
+            socket.gameMap = gameMap; // Expose for testing
             setGameMap(gameMap);
             if (serverLength) setRaceLength(serverLength);
             setScreen('game');
@@ -90,6 +91,7 @@ function App() {
 
         const onGameRestarted = ({ gameMap, raceLength: serverLength }) => {
             console.log("Game Restarted!");
+            socket.gameMap = gameMap; // Expose for testing
             setGameMap(gameMap);
             if (serverLength) setRaceLength(serverLength);
         };

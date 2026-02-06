@@ -47,8 +47,8 @@ test.describe('Multiplayer Competitiveness', () => {
 
         console.log('Verification: Checking players on both screens...');
         // Both should see each other
-        await expect(hostPage.locator('text=JoinerUser')).toBeVisible({ timeout: 20000 });
-        await expect(joinerPage.locator('text=HostUser')).toBeVisible({ timeout: 20000 });
+        await expect(hostPage.locator('p:has-text("JoinerUser")')).toBeVisible({ timeout: 20000 });
+        await expect(joinerPage.locator('p:has-text("HostUser")')).toBeVisible({ timeout: 20000 });
 
         console.log('Success: Multiplayer connection verified!');
         await hostContext.close();
