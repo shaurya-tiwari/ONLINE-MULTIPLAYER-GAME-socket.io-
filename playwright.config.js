@@ -12,7 +12,7 @@ module.exports = defineConfig({
     },
     reporter: 'list',
     use: {
-        baseURL: 'http://localhost:5173',
+        baseURL: process.env.CI ? 'http://localhost:3000' : 'http://localhost:5173',
         trace: 'on-first-retry',
         viewport: { width: 1280, height: 720 },
     },
