@@ -7,7 +7,7 @@
 </h1>
 
 <p align="center">
-  <a href="https://online-multiplayer-game-socket-io.onrender.com/">
+  <a href="https://online-multiplayer-game-socket-io.onrender.com">
     <img src="https://img.shields.io/badge/🎮_PLAY_NOW-LIVE_GAME-FF6B6B?style=for-the-badge&labelColor=1a1a2e&logo=game&logoColor=white" alt="Play Now"/>
   </a>
 </p>
